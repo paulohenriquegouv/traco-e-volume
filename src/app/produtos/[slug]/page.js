@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import ProductDetailClient from './ProductDetailClient';
 
@@ -27,7 +28,7 @@ export default async function ProdutoDetalhePage({ params }) {
       <div className="container-custom py-20 text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Produto não encontrado</h1>
         <p className="text-gray-500">O produto que você procura não está disponível.</p>
-        <a href="/produtos" className="mt-6 inline-block bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700">Ver Produtos</a>
+        <Link href="/produtos" className="mt-6 inline-block bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700">Ver Produtos</Link>
       </div>
     );
   }

@@ -44,6 +44,7 @@ export function CartProvider({ children }) {
         name: product.name,
         price: product.price,
         image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '',
+        category: product.category || '',
         quantity,
       }];
     });

@@ -11,11 +11,14 @@ function getWhatsAppLink(product) {
     ? product.images[0].startsWith('http') ? product.images[0] : `${siteUrl}${product.images[0]}`
     : '';
   const price = Number(product.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const category = product.category ? product.category.charAt(0).toUpperCase() + product.category.slice(1) : '';
+  const description = product.description || product.short_description || '';
+  const descPreview = description.length > 120 ? description.slice(0, 120) + '…' : description;
   const msg = [
-    `Olá! Tenho interesse no produto: *${product.name}*`,
-    ``,
+    `🛒 *${product.name}*`,
+    category ? `📂 Categoria: ${category}` : '',
     `💰 Preço: ${price}`,
-    product.short_description ? `📝 ${product.short_description}` : '',
+    descPreview ? `📝 ${descPreview}` : '',
     imageUrl ? `📷 ${imageUrl}` : '',
     product.material ? `🧵 Material: ${product.material}` : '',
     product.dimensions ? `📏 Dimensões: ${product.dimensions}` : '',

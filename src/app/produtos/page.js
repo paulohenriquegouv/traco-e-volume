@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
+import ProductCard from '@/components/ProductCard';
 
 async function getProducts(searchParams) {
   try {
@@ -72,17 +73,7 @@ export default async function ProdutosPage({ searchParams }) {
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 {products.map(p => (
-                  <div key={p.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all group">
-                    <a href={`/produtos/${p.slug}`} className="block aspect-square bg-gray-50 overflow-hidden">
-                      <img src={p.images?.[0] || '/placeholder.svg'} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                    </a>
-                    <div className="p-3 md:p-4">
-                      {p.category && <span className="text-xs text-gray-400 uppercase">{p.category}</span>}
-                      <a href={`/produtos/${p.slug}`}><h3 className="text-sm font-semibold text-gray-900 line-clamp-2 hover:text-primary-600 mt-1">{p.name}</h3></a>
-                      <p className="text-base font-bold text-gray-900 mt-2">{Number(p.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                      <a href={`/produtos/${p.slug}`} className="mt-3 block w-full text-center bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">Ver Detalhes</a>
-                    </div>
-                  </div>
+                  <ProductCard key={p.id} product={p} />
                 ))}
               </div>
 
