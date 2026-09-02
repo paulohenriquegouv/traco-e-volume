@@ -4,7 +4,8 @@ import { getDb } from '@/lib/db';
 async function getProducts() {
   try {
     const db = await getDb();
-    return await db.prepare('SELECT * FROM products ORDER BY created_at DESC').all().map(p => ({ ...p, images: JSON.parse(p.images || '[]') }));
+    const products = await db.prepare('SELECT * FROM products ORDER BY created_at DESC').all();
+    return products.map(p => ({ ...p, images: JSON.parse(p.images || '[]') }));
   } catch { return []; }
 }
 
