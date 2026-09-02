@@ -23,9 +23,9 @@ Thumbs.db
 # Data
 data/
 
-# Documentation
-Documentacao_*.docx
-scripts/gerar-documentacao.js
+# Documentation (generated)
+# Documentacao_*.docx
+# scripts/gerar-documentacao.js
 
 # Uploads
 public/uploads/*
