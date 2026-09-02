@@ -30,11 +30,11 @@ export async function GET(request) {
 
     // Busca itens de cada pedido
     const stmt = await db.prepare('SELECT * FROM order_items WHERE order_id = ?');
-    const ordersWithItems = orders.map(o => ({
+    const ordersWithItems = await Promise.all(orders.map(async o => ({
       ...o,
       shipping_address: JSON.parse(o.shipping_address || '{}'),
-      items: stmt.all(o.id),
-    }));
+      items: await stmt.all(o.id),
+    })));
 
     return NextResponse.json({
       orders: ordersWithItems,

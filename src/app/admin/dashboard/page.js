@@ -4,12 +4,12 @@ import { getDb } from '@/lib/db';
 async function getStats() {
   try {
     const db = await getDb();
-    const products = await db.prepare('SELECT COUNT(*) as c FROM products').get().c;
-    const activeProducts = await db.prepare('SELECT COUNT(*) as c FROM products WHERE active = 1').get().c;
-    const orders = await db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
-    const pending = await db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'aguardando_pagamento'").get().c;
+    const products = (await db.prepare('SELECT COUNT(*) as c FROM products').get()).c;
+    const activeProducts = (await db.prepare('SELECT COUNT(*) as c FROM products WHERE active = 1').get()).c;
+    const orders = (await db.prepare('SELECT COUNT(*) as c FROM orders').get()).c;
+    const pending = (await db.prepare("SELECT COUNT(*) as c FROM orders WHERE status = 'aguardando_pagamento'").get()).c;
     const recentOrders = await db.prepare('SELECT * FROM orders ORDER BY created_at DESC LIMIT 5').all();
-    const totalRevenue = db.prepare("SELECT COALESCE(SUM(total), 0) as t FROM orders WHERE status IN ('pago', 'enviado', 'entregue', 'em_processamento')").get().t;
+    const totalRevenue = (await db.prepare("SELECT COALESCE(SUM(total), 0) as t FROM orders WHERE status IN ('pago', 'enviado', 'entregue', 'em_processamento')").get()).t;
 
     return { products, activeProducts, orders, pending, totalRevenue, recentOrders: recentOrders.map(o => ({ ...o, shipping_address: JSON.parse(o.shipping_address || '{}') })) };
   } catch { return { products: 0, activeProducts: 0, orders: 0, pending: 0, totalRevenue: 0, recentOrders: [] }; }

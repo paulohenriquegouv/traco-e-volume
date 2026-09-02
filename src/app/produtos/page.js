@@ -19,7 +19,7 @@ async function getProducts(searchParams) {
     const w = `WHERE ${where.join(' AND ')}`;
     const total = await db.prepare(`SELECT COUNT(*) as count FROM products ${w}`).get(...params).count;
     const products = await db.prepare(`SELECT * FROM products ${w} ORDER BY featured DESC, created_at DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
-    const categories = db.prepare("SELECT category, COUNT(*) as count FROM products WHERE active = 1 AND category != '' GROUP BY category ORDER BY count DESC").all();
+    const categories = await db.prepare("SELECT category, COUNT(*) as count FROM products WHERE active = 1 AND category != '' GROUP BY category ORDER BY count DESC").all();
 
     return {
       products: products.map(p => ({ ...p, images: JSON.parse(p.images || '[]') })),
