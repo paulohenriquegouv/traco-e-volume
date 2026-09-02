@@ -15,7 +15,7 @@ const products=[
 {name:'Organizador de Gavetas',slug:'organizador-de-gavetas',short_description:'Módulo organizador divisível.',description:'Organizador modular para gavetas.\n\n• Material: PLA\n• Dimensões: 20x10x5 cm\n• Peso: 90g',price:29.90,compare_price:null,images:[],category:'escritório',material:'PLA',weight:90,dimensions:'20x10x5 cm',stock:25,featured:0,active:1},
 ];
 
-async function seed(){const db=await await getDb();await seedAdmin();const stmt=db.prepare('INSERT INTO products (name,slug,short_description,description,price,compare_price,images,category,material,weight,dimensions,stock,featured,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');let count=0;for(const p of products){const e=db.prepare('SELECT id FROM products WHERE slug=?').get(p.slug);if(!e){stmt.run(p.name,p.slug,p.short_description,p.description,p.price,p.compare_price,JSON.stringify(p.images),p.category,p.material,p.weight,p.dimensions,p.stock,p.featured,p.active);count++;}}
+async function seed(){const db=await getDb();await seedAdmin();const stmt=db.prepare('INSERT INTO products (name,slug,short_description,description,price,compare_price,images,category,material,weight,dimensions,stock,featured,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');let count=0;for(const p of products){const e=await db.prepare('SELECT id FROM products WHERE slug=?').get(p.slug);if(!e){await stmt.run(p.name,p.slug,p.short_description,p.description,p.price,p.compare_price,JSON.stringify(p.images),p.category,p.material,p.weight,p.dimensions,p.stock,p.featured,p.active);count++;}}
 console.log('✅ '+count+' produtos cadastrados.');await closeDb();console.log('\n🎉 Pronto!');}
 seed().catch(err=>{console.error(err);process.exit(1);});
 

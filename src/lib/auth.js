@@ -120,14 +120,14 @@ async function checkAuth(request) {
  */
 async function seedAdmin() {
   const db = await getDb();
-  const existing = db.prepare('SELECT COUNT(*) as count FROM admin_users').get();
+  const existing = await db.prepare('SELECT COUNT(*) as count FROM admin_users').get();
 
   if (existing.count === 0) {
     const username = process.env.ADMIN_USERNAME || 'admin';
     const password = process.env.ADMIN_PASSWORD || 'tracovolume2026';
     const hash = await hashPassword(password);
 
-    db.prepare('INSERT INTO admin_users (username, password_hash) VALUES (?, ?)').run(username, hash);
+    await db.prepare('INSERT INTO admin_users (username, password_hash) VALUES (?, ?)').run(username, hash);
     console.log(`✅ Admin user "${username}" created with password "${password}"`);
   }
 }
