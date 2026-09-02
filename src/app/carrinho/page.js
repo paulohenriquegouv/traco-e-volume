@@ -4,7 +4,18 @@ import Link from 'next/link';
 import { useCart } from '@/components/CartContext';
 
 export default function CartPage() {
-  const { items, updateQuantity, removeItem, total, clearCart } = useCart();
+  const { items, updateQuantity, removeItem, total, clearCart, loaded } = useCart();
+
+  if (!loaded) {
+    return (
+      <div className="container-custom py-20">
+        <div className="max-w-md mx-auto text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-6"></div>
+          <p className="text-gray-500">Carregando carrinho...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (

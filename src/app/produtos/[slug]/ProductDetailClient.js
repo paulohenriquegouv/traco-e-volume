@@ -4,6 +4,27 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/components/CartContext';
 
+function getWhatsAppLink(product) {
+  const phone = process.env.NEXT_PUBLIC_WHATSAPP || '5591981158315';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://traco-e-volume.vercel.app';
+  const imageUrl = Array.isArray(product.images) && product.images[0]
+    ? product.images[0].startsWith('http') ? product.images[0] : `${siteUrl}${product.images[0]}`
+    : '';
+  const price = Number(product.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const msg = [
+    `Olá! Tenho interesse no produto: *${product.name}*`,
+    ``,
+    `💰 Preço: ${price}`,
+    product.short_description ? `📝 ${product.short_description}` : '',
+    imageUrl ? `📷 ${imageUrl}` : '',
+    product.material ? `🧵 Material: ${product.material}` : '',
+    product.dimensions ? `📏 Dimensões: ${product.dimensions}` : '',
+    ``,
+    `🔗 ${siteUrl}/produtos/${product.slug}`,
+  ].filter(Boolean).join('\n');
+  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+}
+
 export default function ProductDetailClient({ product }) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
@@ -49,7 +70,7 @@ export default function ProductDetailClient({ product }) {
             </button>
           </div>
 
-          <a href={process.env.NEXT_PUBLIC_WHATSAPP_LINK || '#'} target="_blank" rel="noopener noreferrer"
+          <a href={getWhatsAppLink(product)} target="_blank" rel="noopener noreferrer"
             className="block w-full text-center bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-medium mb-6">
             Comprar pelo WhatsApp
           </a>
