@@ -1,0 +1,9 @@
+# Arquivos sensíveis — não enviar para o provedor de IA
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+**/node_modules/**
+**/.next/**
+**/data/**
