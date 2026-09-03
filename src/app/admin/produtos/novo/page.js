@@ -65,6 +65,41 @@ export default function NovoProdutoPage() {
         </div>
 
 <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+          <h3 className="font-bold text-gray-900">Preço e Estoque</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Preço *</label>
+              <input type="number" step="0.01" required value={f.price} onChange={e => setF({...f, price: e.target.value})} className={ic} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Preço Original (opcional)</label>
+              <input type="number" step="0.01" value={f.compare_price} onChange={e => setF({...f, compare_price: e.target.value})} className={ic} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Estoque</label>
+            <input type="number" value={f.stock} onChange={e => setF({...f, stock: e.target.value})} className={ic} />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
+          <h3 className="font-bold text-gray-900">Imagens</h3>
+          <div className="flex flex-wrap gap-3">
+            {images.map((url, i) => (
+              <div key={i} className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden border">
+                <img src={url} alt="" className="w-full h-full object-cover" />
+              </div>
+            ))}
+            <label className="w-20 h-20 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-300">
+              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+              </svg>
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
           <h3 className="font-bold text-gray-900">Características</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>

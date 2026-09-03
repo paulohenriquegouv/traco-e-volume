@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 
+// A home lista destaques e categorias vindos do banco. Sem isto ela seria congelada no
+// build e produto novo nunca apareceria. 60s mantém a home rápida sem ficar desatualizada.
+export const revalidate = 60;
+
 async function getFeaturedProducts() {
   try {
     const db = await getDb();

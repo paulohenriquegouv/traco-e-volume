@@ -1,16 +1,29 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 
-async function getProducts() {
+// Sem isto o Next pré-renderiza a lista no build e ela nunca mais consulta o banco:
+// produto novo era gravado mas não aparecia aqui.
+export const dynamic = 'force-dynamic';
+
+async function getProducts(busca) {
   try {
     const db = await getDb();
-    const products = await db.prepare('SELECT * FROM products ORDER BY created_at DESC').all();
+    const termo = (busca || '').trim();
+    if (!termo) {
+      const products = await db.prepare('SELECT * FROM products ORDER BY created_at DESC').all();
+      return products.map(p => ({ ...p, images: JSON.parse(p.images || '[]') }));
+    }
+    const like = `%${termo}%`;
+    const products = await db.prepare(
+      'SELECT * FROM products WHERE name LIKE ? OR slug LIKE ? OR category LIKE ? OR material LIKE ? ORDER BY created_at DESC'
+    ).all(like, like, like, like);
     return products.map(p => ({ ...p, images: JSON.parse(p.images || '[]') }));
   } catch { return []; }
 }
 
-export default async function AdminProdutosPage() {
-  const products = await getProducts();
+export default async function AdminProdutosPage({ searchParams }) {
+  const busca = searchParams?.busca || '';
+  const products = await getProducts(busca);
 
   return (
     <div>
@@ -18,6 +31,36 @@ export default async function AdminProdutosPage() {
         <h1 className="text-2xl font-bold text-gray-900">Produtos</h1>
         <Link href="/admin/produtos/novo" className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Novo Produto</Link>
       </div>
+
+      {/* Busca — form GET simples, funciona sem JavaScript */}
+      <form method="get" action="/admin/produtos" className="mb-6 flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+          </svg>
+          <input
+            type="text"
+            name="busca"
+            defaultValue={busca}
+            placeholder="Buscar por nome, slug, categoria ou material..."
+            className="w-full border border-gray-200 rounded-lg pl-9 pr-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+        <button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium">
+          Buscar
+        </button>
+        {busca && (
+          <Link href="/admin/produtos" className="text-sm text-gray-500 hover:text-gray-700">
+            Limpar
+          </Link>
+        )}
+      </form>
+
+      {busca && (
+        <p className="mb-4 text-sm text-gray-500">
+          {products.length} resultado{products.length === 1 ? '' : 's'} para <span className="font-medium text-gray-900">“{busca}”</span>
+        </p>
+      )}
 
       {products.length > 0 ? (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -63,6 +106,11 @@ export default async function AdminProdutosPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      ) : busca ? (
+        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+          <p className="text-gray-500">Nenhum produto encontrado para “{busca}”.</p>
+          <Link href="/admin/produtos" className="mt-4 inline-block text-primary-600 font-medium">Ver todos os produtos</Link>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
