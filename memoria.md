@@ -209,8 +209,15 @@ de pagamento no checkout, mas não existia (retornava 404). Pix e boleto pagos n
 
 **Testes:** `npm run teste-webhook` — 33 casos com banco falso em memória, não toca no banco real.
 
-**Pendente de configuração:** cadastrar a URL no painel do MP e preencher
-`MERCADO_PAGO_WEBHOOK_SECRET` no `.env.local` e na Vercel.
+**Configurado e validado em 02/09/2026:** URL cadastrada no painel do MP (modo produção,
+evento Pagamentos), credenciais de produção e `MERCADO_PAGO_WEBHOOK_SECRET` na Vercel e no
+`.env.local`. "Simular notificação" do painel respondeu **200 OK**. `npm run verifica-webhook`
+passa nos 8 checks.
+
+**Gotcha da configuração:** o access token e a public key ficam em *Credenciais de produção*,
+mas a **assinatura secreta só existe depois** de salvar a URL em *Webhooks > Configurar
+notificações*. São coisas diferentes — colar um access token no `MERCADO_PAGO_WEBHOOK_SECRET`
+faz o servidor rejeitar toda notificação real com 401, o que é pior que não ter secret.
 
 ---
 
