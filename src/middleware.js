@@ -30,6 +30,12 @@ export async function middleware(request) {
   if (token) {
     try {
       await jwtVerify(token, secret);
+      // Nao existe pagina em /admin: manda quem entrou direto para o painel
+      if (pathname === '/admin' || pathname === '/admin/') {
+        const dash = request.nextUrl.clone();
+        dash.pathname = '/admin/dashboard';
+        return NextResponse.redirect(dash);
+      }
       return NextResponse.next();
     } catch {
       // token expirado, adulterado ou assinado com outro segredo: trata como ausente
