@@ -155,6 +155,27 @@ traco-e-volume/
 
 ---
 
+## 5.1 🛡️ Proteção do /admin (middleware)
+
+**Arquivo:** `src/middleware.js` — barra `/admin/*` no servidor, antes de qualquer renderização.
+
+O `admin/layout.js` é Client Component: a checagem de sessão roda no navegador, num
+`useEffect`. Isso expulsa o visitante da tela, mas **só depois** de o servidor ter montado e
+enviado o HTML. Como `/admin/dashboard` e `/admin/produtos` são Server Components que
+consultam o banco, elas entregavam seus dados a quem pedisse a URL sem sessão nenhuma —
+inclusive os 5 pedidos mais recentes do dashboard, com nome, e-mail, telefone, CPF e endereço.
+
+O middleware valida o cookie `tv_admin_token` com `jose` (roda no Edge; `lib/auth.js` não
+serve porque importa o driver MySQL). `/admin/login` fica liberado, e `/admin` redireciona
+para o dashboard.
+
+**Gotcha de teste:** `npm start` local **não consegue** simular o Edge Runtime no Node 24 —
+todas as rotas viram 500 com `EvalError: Code generation from strings disallowed`. É falha do
+simulador, não do código: no `npm run dev` funciona, e na Vercel também. Middleware se valida
+em **deploy de preview** (branch separada), nunca direto na main.
+
+---
+
 ## 6. 🛒 Carrinho (CartContext)
 
 - **Provider:** `CartProvider` no `layout.js` → envolvendo toda a app
