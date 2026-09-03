@@ -110,7 +110,8 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
       </div>
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8">Finalizar Pedido</h1>
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <form onSubmit={handleSubmit} className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
+        <form id="form-checkout" onSubmit={handleSubmit} className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-4">Dados Pessoais</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -172,6 +173,15 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
               ))}
             </div>
           </div>
+        </form>
+
+        {/*
+          Daqui para baixo fica FORA do <form> de propósito: o brick do Mercado Pago
+          renderiza um <form> próprio, e formulário dentro de formulário é inválido em
+          HTML — o navegador descarta o interno e o brick falha ao inicializar. O botão
+          continua enviando o formulário pelo atributo form="form-checkout".
+        */}
+        <div className="space-y-6">
           {method === 'boleto' && (
             <div className="bg-blue-50 text-blue-700 p-4 rounded-lg text-sm">
               O boleto exige CPF/CNPJ e endereço completo (com CEP) — é uma exigência do banco emissor.
@@ -197,11 +207,12 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
           {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm">{error}</div>}
 
           {method !== 'card' && (
-            <button type="submit" disabled={loading} className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium disabled:opacity-50">
+            <button type="submit" form="form-checkout" disabled={loading} className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium disabled:opacity-50">
               {loading ? 'Processando...' : 'Finalizar Pedido'}
             </button>
           )}
-        </form>
+        </div>
+        </div>
         <aside className="lg:col-span-2">
           <div className="bg-white rounded-xl border border-gray-100 p-6 sticky top-24">
             <h3 className="font-bold text-gray-900 mb-4">Resumo do Pedido</h3>
