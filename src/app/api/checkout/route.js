@@ -56,9 +56,12 @@ export async function POST(request) {
       const doc = body.customer_document || '00000000000';
       payer.identification = { type: doc.length === 11 ? 'CPF' : 'CNPJ', number: doc };
       const r = await new Payment(client).create({ body: { transaction_amount: total, installments: body.installments || 1, token: body.card_token, payment_method_id: body.card_method_id, issuer_id: body.card_issuer_id || undefined, payer, description: 'Pedido ' + orderId + ' - Traço & Volume', external_reference: orderId, notification_url: process.env.NEXT_PUBLIC_SITE_URL + '/api/webhooks/mercadopago' } });
-      const pago = r.status === 'approved';
+      // Cartao responde na hora: recusa vira pedido cancelado, nao "aguardando pagamento"
+      const recusado = r.status === 'rejected' || r.status === 'cancelled';
+      const statusPedido = r.status === 'approved' ? 'pago' : recusado ? 'cancelado' : 'aguardando_pagamento';
+      const statusPagamento = r.status === 'approved' ? 'approved' : recusado ? r.status : 'pending';
       await saveOrder(db, orderId, body, body.shipping_address || {}, 'card', r.id, total);
-      await db.prepare('UPDATE orders SET payment_status = ?, status = ? WHERE order_id = ?').run(pago ? 'approved' : 'pending', pago ? 'pago' : 'aguardando_pagamento', orderId);
+      await db.prepare('UPDATE orders SET payment_status = ?, status = ? WHERE order_id = ?').run(statusPagamento, statusPedido, orderId);
       await saveOrderItems(db, orderId, body.items);
       return NextResponse.json({ success: true, order_id: orderId, payment_id: r.id, payment_method: 'card', status: r.status, status_detail: r.status_detail, installments: r.installments });
     }
