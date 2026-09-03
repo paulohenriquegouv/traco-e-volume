@@ -56,6 +56,7 @@ const apiRoutes = [
   ['POST /api/pedidos', 'Buscar pedido', 'Público'],
   ['PATCH /api/pedidos/[id]', 'Atualizar status', 'Admin'],
   ['POST /api/upload', 'Upload de imagem', 'Admin'],
+  ['POST /api/webhooks/mercadopago', 'Confirmacao automatica de pagamento (Mercado Pago)', 'Assinatura HMAC'],
 ];
 
 // ============================

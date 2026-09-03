@@ -187,6 +187,33 @@ Ex: TV2026090100001
 
 ---
 
+## 7.1 🔔 Webhook do Mercado Pago (confirmação automática)
+
+**Rota:** `/api/webhooks/mercadopago` — já era apontada pelo `notification_url` dos três métodos
+de pagamento no checkout, mas não existia (retornava 404). Pix e boleto pagos nunca saíam de
+`aguardando_pagamento`.
+
+**Lógica:** `src/lib/webhook-mp.js` (separada da rota para ser testável sem chamar o MP).
+
+- **Fonte da verdade é a API do MP:** o corpo da notificação nunca é usado para decidir status —
+  o pagamento é relido com `Payment.get()`. Corpo forjado não consegue marcar pedido como pago.
+- **Assinatura HMAC-SHA256** dos headers `x-signature`/`x-request-id`, manifest
+  `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`, comparação em tempo constante.
+  Sem `MERCADO_PAGO_WEBHOOK_SECRET` configurado a validação é pulada (o status ainda vem da API).
+- **Idempotência:** o UPDATE de aprovação tem `WHERE payment_status <> 'approved'` e usa
+  `affectedRows` para saber se foi a transição real — reenvio do MP não baixa estoque duas vezes.
+- **Baixa de estoque** acontece só na transição para pago, com `GREATEST(stock - ?, 0)`.
+- **Nunca rebaixa** pedido que o admin já moveu para `em_processamento`, `enviado` ou `entregue`.
+- **Códigos:** 200 processado/ignorado, 400 sem `data.id`, 401 assinatura inválida,
+  500 falha transitória (faz o MP reenviar).
+
+**Testes:** `npm run teste-webhook` — 33 casos com banco falso em memória, não toca no banco real.
+
+**Pendente de configuração:** cadastrar a URL no painel do MP e preencher
+`MERCADO_PAGO_WEBHOOK_SECRET` no `.env.local` e na Vercel.
+
+---
+
 ## 8. 📱 WhatsApp
 
 ### Botão na página do produto
@@ -240,6 +267,7 @@ Ex: TV2026090100001
 | `/api/pedidos` | GET, POST | GET: admin | Listar/buscar |
 | `/api/pedidos/[id]` | GET, PATCH | admin | Detalhe/status |
 | `/api/upload` | POST | admin | Upload imagem |
+| `/api/webhooks/mercadopago` | POST, GET | HMAC | Confirmação automática de pagamento |
 
 ---
 
@@ -264,6 +292,7 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=tracovolume2026
 JWT_SECRET=<secret>
 MERCADO_PAGO_ACCESS_TOKEN=<token>
+MERCADO_PAGO_WEBHOOK_SECRET=<assinatura secreta do webhook>
 NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY=<key>
 DATABASE_URL=mysql://user:pass@host:port/db?ssl-mode=REQUIRED
 ```

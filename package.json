@@ -9,7 +9,9 @@
     "start": "next start",
     "seed": "node scripts/seed.js",
     "init-db": "node scripts/init-db.js",
-    "gerar-docs": "node scripts/gerar-documentacao.js"
+    "gerar-docs": "node scripts/gerar-documentacao.js",
+    "teste-webhook": "node scripts/teste-webhook.js",
+    "verifica-webhook": "node scripts/verifica-webhook.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

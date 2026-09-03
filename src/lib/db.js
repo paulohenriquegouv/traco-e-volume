@@ -9,14 +9,14 @@ class MySQLDB {
     return {
       async get(...p) { const [r] = await self.pool.execute(sql, p); return r[0] || null; },
       async all(...p) { const [r] = await self.pool.execute(sql, p); return r; },
-      async run(...p) { const [r] = await self.pool.execute(sql, p); return { lastInsertRowid: r.insertId }; },
+      async run(...p) { const [r] = await self.pool.execute(sql, p); return { lastInsertRowid: r.insertId, changes: r.affectedRows ?? 0 }; },
     };
   }
   async exec(sql) { await this.pool.execute(sql); }
 }
 
 function createMockDb() {
-  return { prepare(sql) { return { get: async () => null, all: async () => [], run: async () => ({ lastInsertRowid: 0 }) }; }, exec: async () => {} };
+  return { prepare(sql) { return { get: async () => null, all: async () => [], run: async () => ({ lastInsertRowid: 0, changes: 0 }) }; }, exec: async () => {} };
 }
 
 function parseDatabaseUrl(url) {

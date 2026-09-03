@@ -25,7 +25,8 @@ export async function GET(request) {
       params.push(status);
     }
 
-    const total = await db.prepare(`SELECT COUNT(*) as count FROM orders ${where}`).get(...params).count;
+    const totalRow = await db.prepare(`SELECT COUNT(*) as count FROM orders ${where}`).get(...params);
+    const total = totalRow?.count || 0;
     const orders = await db.prepare(`SELECT * FROM orders ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
 
     // Busca itens de cada pedido
