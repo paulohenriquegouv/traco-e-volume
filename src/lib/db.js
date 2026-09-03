@@ -42,16 +42,53 @@ async function createTables(pool) {
   try { await pool.execute('CREATE INDEX idx_order_items_order ON order_items(order_id)'); } catch {}
 }
 
+// Nem todo servidor aceita SSL: o Aiven exige, o MySQL 5.7 da Locaweb (DBaaS) pode
+// recusar o handshake. Tenta com SSL e, se a falha for do próprio TLS, repete sem.
+// Para forçar, use ssl-mode=DISABLED ou ssl-mode=REQUIRED na DATABASE_URL.
+function falhaDeSsl(e) {
+  const m = String(e?.message || '');
+  return e?.code === 'HANDSHAKE_NO_SSL_SUPPORT'
+    || /SSL|TLS|secure connection|wrong version number/i.test(m);
+}
+
+async function abrirPool(config, comSsl) {
+  const p = mysql.createPool({
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    password: config.password,
+    database: config.database,
+    ...(comSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  });
+  await p.execute('SELECT 1');
+  return p;
+}
+
 async function getDb() {
   if (pool) return new MySQLDB(pool);
   if (mockDb) return mockDb;
   let config;
   const dbUrl = process.env.DATABASE_URL;
   if (dbUrl) { config = parseDatabaseUrl(dbUrl); if (!config) { mockDb = createMockDb(); return mockDb; } }
-  else { config = { host: process.env.MYSQL_HOST || 'localhost', port: parseInt(process.env.MYSQL_PORT || '3306'), user: process.env.MYSQL_USER || 'root', password: process.env.MYSQL_PASSWORD || '', database: process.env.MYSQL_DATABASE || 'traco_e_volume', ssl: { rejectUnauthorized: false } }; }
+  else { config = { host: process.env.MYSQL_HOST || 'localhost', port: parseInt(process.env.MYSQL_PORT || '3306'), user: process.env.MYSQL_USER || 'root', password: process.env.MYSQL_PASSWORD || '', database: process.env.MYSQL_DATABASE || 'traco_e_volume' }; }
+
+  const modo = /ssl-mode=DISABLED/i.test(dbUrl || '') ? 'sem'
+    : /ssl-mode=REQUIRED/i.test(dbUrl || '') ? 'com' : 'auto';
+
   try {
-    pool = mysql.createPool({ host: config.host, port: config.port, user: config.user, password: config.password, database: config.database, ssl: { rejectUnauthorized: false }, waitForConnections: true, connectionLimit: 10, queueLimit: 0 });
-    await pool.execute('SELECT 1');
+    try {
+      pool = await abrirPool(config, modo !== 'sem');
+    } catch (e) {
+      if (modo === 'auto' && falhaDeSsl(e)) {
+        console.log('Servidor sem SSL, reconectando sem TLS...');
+        pool = await abrirPool(config, false);
+      } else {
+        throw e;
+      }
+    }
     await createTables(pool);
     console.log('OK MySQL: ' + config.database);
     return new MySQLDB(pool);
