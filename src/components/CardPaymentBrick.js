@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 /**
  * Formulário de cartão do Mercado Pago (Payment Brick).
@@ -13,7 +13,6 @@ import { useEffect, useRef, useState } from 'react';
  */
 
 const SDK_URL = 'https://sdk.mercadopago.com/js/v2';
-const CONTAINER_ID = 'brick-cartao';
 
 function carregarSdk() {
   return new Promise((resolve, reject) => {
@@ -22,9 +21,15 @@ function carregarSdk() {
 
     const existente = document.querySelector(`script[src="${SDK_URL}"]`);
     if (existente) {
-      existente.addEventListener('load', () => resolve());
-      existente.addEventListener('error', () => reject(new Error('falha ao carregar o SDK')));
-      return;
+      // O script pode ter terminado de carregar antes deste listener existir:
+      // sem o polling a promise ficaria pendente para sempre.
+      const inicio = Date.now();
+      const checar = () => {
+        if (window.MercadoPago) return resolve();
+        if (Date.now() - inicio > 15000) return reject(new Error('timeout ao carregar o SDK'));
+        setTimeout(checar, 100);
+      };
+      return checar();
     }
 
     const script = document.createElement('script');
@@ -40,21 +45,23 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
   const [erro, setErro] = useState('');
   const [pronto, setPronto] = useState(false);
 
-  // onPagar muda a cada render do pai; o brick é criado uma vez e lê daqui
+  // O Mercado Pago guarda estado interno por id de container. Reaproveitar o mesmo
+  // id entre montagens fazia a segunda criação resolver sem desenhar nada — id
+  // próprio por montagem elimina a colisão.
+  const containerId = 'brick-cartao-' + useId().replace(/:/g, '');
+
+  // O brick é criado uma vez só; estes refs entregam os valores do momento da
+  // criação e do envio, sem obrigar o efeito a rodar de novo.
   const onPagarRef = useRef(onPagar);
   onPagarRef.current = onPagar;
-
-  // O controlador do brick é global por container: se a montagem antiga desmontar
-  // depois que a nova criou o seu, ela derruba o formulário de quem ficou. Em dev o
-  // StrictMode roda o efeito duas vezes e isso acontece sempre. A geração diz quem
-  // é a montagem atual, e só ela pode desmontar.
-  const geracaoRef = useRef(0);
+  const amountRef = useRef(amount);
+  amountRef.current = amount;
+  const emailRef = useRef(email);
+  emailRef.current = email;
 
   useEffect(() => {
-    const geracao = ++geracaoRef.current;
+    let vivo = true;
     let controller = null;
-
-    const souAtual = () => geracaoRef.current === geracao;
 
     async function montar() {
       const publicKey = process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY;
@@ -66,23 +73,19 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
 
       try {
         await carregarSdk();
-        if (!souAtual()) return;
-
-        // Restos de uma montagem anterior impedem o brick novo de aparecer
-        const container = document.getElementById(CONTAINER_ID);
-        if (container) container.innerHTML = '';
+        if (!vivo) return;
 
         const mp = new window.MercadoPago(publicKey, { locale: 'pt-BR' });
-        const criado = await mp.bricks().create('cardPayment', CONTAINER_ID, {
+        const criado = await mp.bricks().create('cardPayment', containerId, {
           initialization: {
-            amount: Number(amount),
-            ...(email ? { payer: { email } } : {}),
+            amount: Number(amountRef.current),
+            ...(emailRef.current ? { payer: { email: emailRef.current } } : {}),
           },
           customization: {
             paymentMethods: { maxInstallments: 12 },
           },
           callbacks: {
-            onReady: () => { if (souAtual()) setPronto(true); },
+            onReady: () => { if (vivo) setPronto(true); },
             onSubmit: (dados) => {
               // O brick só reabilita o botão quando esta promise termina
               return Promise.resolve(
@@ -97,42 +100,50 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
             },
             onError: (e) => {
               console.error('[cartao] erro no brick:', e);
-              if (souAtual()) setErro('Não foi possível processar o cartão. Confira os dados e tente de novo.');
+              if (vivo) setErro('Não foi possível processar o cartão. Confira os dados e tente de novo.');
             },
           },
         });
 
-        // Terminou de criar mas já não sou a montagem atual: limpo o meu
-        if (!souAtual()) {
+        if (!vivo) {
           try { criado?.unmount?.(); } catch {}
           return;
         }
         controller = criado;
-        // Nem sempre o onReady chega; a criação ter resolvido já significa formulário na tela
+
+        // A criação pode resolver sem desenhar nada (já aconteceu). Sem esta
+        // checagem o cliente ficaria olhando um espaço vazio, sem botão nenhum.
+        await new Promise(r => setTimeout(r, 1200));
+        if (!vivo) return;
+        const montou = (document.getElementById(containerId)?.childElementCount || 0) > 0;
+        if (!montou) {
+          console.error('[cartao] brick criado mas nao renderizou');
+          setErro('Não foi possível carregar o formulário de cartão. Recarregue a página ou pague com Pix.');
+          return;
+        }
         setPronto(true);
       } catch (e) {
         console.error('[cartao] falha ao montar o formulário:', e);
-        if (souAtual()) setErro('Não foi possível carregar o formulário de cartão. Recarregue a página.');
+        if (vivo) setErro('Não foi possível carregar o formulário de cartão. Recarregue a página.');
       }
     }
 
     montar();
 
     return () => {
-      // Só desmonta se ninguém tomou o lugar desta montagem
-      if (geracaoRef.current === geracao) {
-        try { controller?.unmount?.(); } catch {}
-      }
+      vivo = false;
+      try { controller?.unmount?.(); } catch {}
     };
-    // Recria o brick quando o valor muda — o parcelamento depende dele
-  }, [amount, email]);
+    // Criado uma única vez: o valor e o e-mail vêm dos refs. O carrinho não muda
+    // enquanto o checkout está aberto.
+  }, [containerId]);
 
   return (
     <div>
       {!pronto && !erro && (
         <p className="text-sm text-gray-500 py-4">Carregando formulário seguro do Mercado Pago...</p>
       )}
-      <div id={CONTAINER_ID} />
+      <div id={containerId} />
       {erro && <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm mt-3">{erro}</div>}
     </div>
   );

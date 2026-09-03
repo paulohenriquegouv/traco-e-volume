@@ -3,6 +3,44 @@ import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { getDb } from '@/lib/db';
 import { generateOrderId } from '@/lib/auth';
 
+// CPF/CNPJ chega formatado do formulario; o MP so aceita digitos
+function onlyDigits(v) {
+  return String(v || '').replace(/\D/g, '');
+}
+
+// Confere os digitos verificadores. Sem isto, um "00000000000" so seria recusado
+// la no Mercado Pago, com mensagem generica.
+function cpfValido(cpf) {
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  for (const [fatorInicial, digito] of [[10, 9], [11, 10]]) {
+    let soma = 0;
+    for (let i = 0; i < digito; i++) soma += Number(cpf[i]) * (fatorInicial - i);
+    let resto = (soma * 10) % 11;
+    if (resto === 10) resto = 0;
+    if (resto !== Number(cpf[digito])) return false;
+  }
+  return true;
+}
+
+function cnpjValido(cnpj) {
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+  const calc = (tamanho) => {
+    let soma = 0;
+    let pos = tamanho - 7;
+    for (let i = 0; i < tamanho; i++) {
+      soma += Number(cnpj[i]) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    const r = soma % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+  return calc(12) === Number(cnpj[12]) && calc(13) === Number(cnpj[13]);
+}
+
+function documentoValido(doc) {
+  return doc.length === 11 ? cpfValido(doc) : doc.length === 14 ? cnpjValido(doc) : false;
+}
+
 async function saveOrder(db, orderId, body, address, method, paymentId, total) {
   const { customer_name, customer_email, customer_phone, customer_document } = body;
   await db.prepare('INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, customer_document, shipping_address, payment_method, payment_id, payment_status, total, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
@@ -34,7 +72,9 @@ export async function POST(request) {
     const client = new MercadoPagoConfig({ accessToken });
     const method = body.payment_method || 'pix';
     const total = body.items.reduce((s, i) => s + i.price * i.quantity, 0) + (body.shipping || 0);
-    const payer = { email: body.customer_email, first_name: body.customer_name.split(' ')[0], last_name: body.customer_name.split(' ').slice(1).join(' ') || '' };
+    const partesNome = body.customer_name.trim().split(/\s+/);
+    // O MP recusa sobrenome vazio no boleto; repetir o primeiro nome e o fallback usual
+    const payer = { email: body.customer_email, first_name: partesNome[0], last_name: partesNome.slice(1).join(' ') || partesNome[0] };
 
     if (method === 'pix') {
       const r = await new Payment(client).create({ body: { transaction_amount: total, description: 'Pedido ' + orderId + ' - Traço & Volume', payment_method_id: 'pix', payer, external_reference: orderId, notification_url: process.env.NEXT_PUBLIC_SITE_URL + '/api/webhooks/mercadopago' } });
@@ -44,8 +84,25 @@ export async function POST(request) {
     }
 
     if (method === 'boleto') {
-      const doc = body.customer_document || '00000000000';
+      // O boleto exige CPF/CNPJ real e endereco completo do pagador; sem isso o MP recusa
+      const doc = onlyDigits(body.customer_document);
+      if (!documentoValido(doc)) {
+        return NextResponse.json({ error: 'Para pagar com boleto, informe um CPF ou CNPJ válido.' }, { status: 400 });
+      }
+      const end = body.shipping_address || {};
+      const cep = onlyDigits(end.zip);
+      if (cep.length !== 8 || !end.address?.trim() || !end.city?.trim() || !end.state?.trim()) {
+        return NextResponse.json({ error: 'Para pagar com boleto, preencha endereço, cidade, estado e CEP.' }, { status: 400 });
+      }
       payer.identification = { type: doc.length === 11 ? 'CPF' : 'CNPJ', number: doc };
+      payer.address = {
+        zip_code: cep,
+        street_name: end.address,
+        street_number: end.number || 'S/N',
+        neighborhood: end.neighborhood || end.city,
+        city: end.city,
+        federal_unit: end.state.toUpperCase().slice(0, 2),
+      };
       const r = await new Payment(client).create({ body: { transaction_amount: total, description: 'Pedido ' + orderId + ' - Traço & Volume', payment_method_id: 'bolbradesco', payer, external_reference: orderId, notification_url: process.env.NEXT_PUBLIC_SITE_URL + '/api/webhooks/mercadopago' } });
       await saveOrder(db, orderId, body, body.shipping_address || {}, 'boleto', r.id, total);
       await saveOrderItems(db, orderId, body.items);
@@ -53,8 +110,10 @@ export async function POST(request) {
     }
 
     if (method === 'card') {
-      const doc = body.customer_document || '00000000000';
-      payer.identification = { type: doc.length === 11 ? 'CPF' : 'CNPJ', number: doc };
+      const doc = onlyDigits(body.customer_document);
+      if (documentoValido(doc)) {
+        payer.identification = { type: doc.length === 11 ? 'CPF' : 'CNPJ', number: doc };
+      }
       const r = await new Payment(client).create({ body: { transaction_amount: total, installments: body.installments || 1, token: body.card_token, payment_method_id: body.card_method_id, issuer_id: body.card_issuer_id || undefined, payer, description: 'Pedido ' + orderId + ' - Traço & Volume', external_reference: orderId, notification_url: process.env.NEXT_PUBLIC_SITE_URL + '/api/webhooks/mercadopago' } });
       // Cartao responde na hora: recusa vira pedido cancelado, nao "aguardando pagamento"
       const recusado = r.status === 'rejected' || r.status === 'cancelled';
@@ -68,7 +127,9 @@ export async function POST(request) {
 
     return NextResponse.json({ error: 'Método inválido' }, { status: 400 });
   } catch (error) {
-    console.error('Erro checkout:', error);
-    return NextResponse.json({ error: 'Erro ao processar pagamento', details: error.message }, { status: 500 });
+    console.error('Erro checkout:', error?.message, JSON.stringify(error?.cause || {}));
+    // A causa do MP diz o que faltou; sem isso o cliente so via "Erro ao processar pagamento"
+    const motivo = error?.cause?.[0]?.description || error?.cause?.error?.causes?.[0]?.description || '';
+    return NextResponse.json({ error: motivo ? 'Pagamento recusado: ' + motivo : 'Erro ao processar pagamento', details: error.message }, { status: 500 });
   }
 }

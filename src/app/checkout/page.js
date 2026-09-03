@@ -35,7 +35,7 @@ const METHODS = [
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, clearCart } = useCart();
-  const [f, setF] = useState({ name: '', email: '', phone: '', document: '', address: '', city: '', state: '', zip: '' });
+  const [f, setF] = useState({ name: '', email: '', phone: '', document: '', address: '', number: '', neighborhood: '', city: '', state: '', zip: '' });
   const [method, setMethod] = useState('pix');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +56,7 @@ export default function CheckoutPage() {
   const enviarPedido = async (extra = {}) => {
     setError('');
     const res = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity })), customer_name: f.name, customer_email: f.email, customer_phone: f.phone, customer_document: f.document, shipping_address: { address: f.address, city: f.city, state: f.state, zip: f.zip }, payment_method: method, shipping: 0, ...extra }),
+      body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity })), customer_name: f.name, customer_email: f.email, customer_phone: f.phone, customer_document: f.document, shipping_address: { address: f.address, number: f.number, neighborhood: f.neighborhood, city: f.city, state: f.state, zip: f.zip }, payment_method: method, shipping: 0, ...extra }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erro no pagamento');
@@ -135,9 +135,17 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
           <div className="bg-white rounded-xl border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-4">Endereço de Entrega</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Endereço{method === 'boleto' ? ' *' : ''}</label>
                 <input type="text" value={f.address} onChange={e => setF({...f, address: e.target.value})} className={ic} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                <input type="text" value={f.number} onChange={e => setF({...f, number: e.target.value})} className={ic} />
+              </div>
+              <div className="md:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                <input type="text" value={f.neighborhood} onChange={e => setF({...f, neighborhood: e.target.value})} className={ic} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
@@ -164,6 +172,12 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
               ))}
             </div>
           </div>
+          {method === 'boleto' && (
+            <div className="bg-blue-50 text-blue-700 p-4 rounded-lg text-sm">
+              O boleto exige CPF/CNPJ e endereço completo (com CEP) — é uma exigência do banco emissor.
+            </div>
+          )}
+
           {method === 'card' && (
             <div className="bg-white rounded-xl border border-gray-100 p-6">
               <h3 className="font-bold text-gray-900 mb-1">Dados do Cartão</h3>
