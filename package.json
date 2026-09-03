@@ -11,7 +11,9 @@
     "init-db": "node scripts/init-db.js",
     "gerar-docs": "node scripts/gerar-documentacao.js",
     "teste-webhook": "node scripts/teste-webhook.js",
-    "verifica-webhook": "node scripts/verifica-webhook.js"
+    "verifica-webhook": "node scripts/verifica-webhook.js",
+    "backup": "node scripts/backup-banco.js",
+    "restaurar": "node scripts/restaurar-banco.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

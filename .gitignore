@@ -35,3 +35,7 @@ public/uploads/*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Backups do banco (contem dados pessoais de clientes)
+backups/
+*.sql.bak
