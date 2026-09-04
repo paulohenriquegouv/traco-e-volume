@@ -75,6 +75,21 @@ async function abrirPool(config, comSsl) {
   return p;
 }
 
+// createTables dispara 16 comandos. Como cada ida ao banco custa dezenas de
+// milissegundos (e a funcao roda longe dele), isso somava perto de um segundo em
+// TODA conexao nova — a espera que aparecia no primeiro acesso. Uma consulta
+// barata resolve: se as tabelas ja existem, nao ha nada a fazer.
+async function garantirTabelas(pool) {
+  try {
+    await pool.execute('SELECT 1 FROM products LIMIT 1');
+    return;
+  } catch (e) {
+    if (e?.code !== 'ER_NO_SUCH_TABLE') throw e;
+    console.log('Tabelas ausentes, criando...');
+    await createTables(pool);
+  }
+}
+
 async function getDb() {
   if (pool) return new MySQLDB(pool);
   if (mockDb) return mockDb;
@@ -97,7 +112,7 @@ async function getDb() {
         throw e;
       }
     }
-    await createTables(pool);
+    await garantirTabelas(pool);
     console.log('OK MySQL: ' + config.database);
     return new MySQLDB(pool);
   } catch (e) {
