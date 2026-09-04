@@ -154,7 +154,11 @@ function Conteudo() {
           </div>
         </div>
 
-        <p className="text-center text-sm text-gray-400 mt-5">
+        <p className="text-center text-sm text-gray-400 mt-4">
+          <Link href="/esqueci-senha" className="btn text-gray-500 hover:text-gray-700">Esqueci minha senha</Link>
+        </p>
+
+        <p className="text-center text-sm text-gray-400 mt-3">
           Quer só consultar um pedido?{' '}
           <Link href="/pedido" className="text-primary-600">Buscar sem entrar</Link>
         </p>

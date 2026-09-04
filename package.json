@@ -15,7 +15,9 @@
     "backup": "node scripts/backup-banco.js",
     "restaurar": "node scripts/restaurar-banco.js",
     "testar-banco": "node scripts/testar-banco.js",
-    "migrar-contas": "node scripts/migrar-contas.js"
+    "migrar-contas": "node scripts/migrar-contas.js",
+    "testar-email": "node scripts/testar-email.js",
+    "migrar-tokens": "node scripts/migrar-tokens.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -23,6 +25,7 @@
     "mercadopago": "^2.3.0",
     "mysql2": "^3.24.3",
     "next": "^14.2.0",
+    "nodemailer": "^10.0.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

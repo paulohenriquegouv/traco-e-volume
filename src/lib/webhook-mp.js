@@ -55,6 +55,33 @@ function validarAssinatura({ assinatura, requestId, dataId, secret }) {
   return { ok: true, motivo: 'assinatura valida' };
 }
 
+// Manda a confirmação de pagamento. Chamada só na transição para "pago", junto
+// com a baixa de estoque — a mesma trava que impede estoque baixado duas vezes
+// impede e-mail repetido quando o Mercado Pago reenvia a notificação.
+async function avisarPagamentoConfirmado(db, pedido) {
+  try {
+    const { enviarConfirmacaoDePedido } = require('./email');
+    const itens = await db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(pedido.id);
+    let endereco = {};
+    try { endereco = JSON.parse(pedido.shipping_address || '{}'); } catch {}
+
+    const r = await enviarConfirmacaoDePedido({
+      para: pedido.customer_email,
+      nome: pedido.customer_name || 'cliente',
+      pedido: { order_id: pedido.order_id, total: pedido.total },
+      itens,
+      endereco,
+    });
+    if (r.ok) {
+      await db.prepare('UPDATE orders SET email_confirmacao_em = NOW() WHERE id = ?').run(pedido.id);
+    }
+  } catch (e) {
+    // Nunca deixa o e-mail derrubar o webhook: o Mercado Pago precisa do 200,
+    // senão reenvia a notificação e o pedido fica em limbo.
+    console.error(`${LOG} falha ao enviar confirmação do pedido ${pedido.order_id}:`, e?.message);
+  }
+}
+
 // Dá baixa no estoque dos itens do pedido. Chamado só na transição para "pago".
 async function baixarEstoque(db, orderRowId) {
   const itens = await db.prepare(
@@ -106,6 +133,7 @@ async function processarPagamento(db, pagamento, dataId) {
     if (r.changes > 0) {
       const n = await baixarEstoque(db, pedido.id);
       console.log(`${LOG} pedido ${pedido.order_id} PAGO — estoque baixado em ${n} item(ns)`);
+      await avisarPagamentoConfirmado(db, pedido);
       return { http: 200, corpo: { ok: true, pedido: pedido.order_id, status: statusPedido, novo: true } };
     }
     return { http: 200, corpo: { ok: true, pedido: pedido.order_id, status: pedido.status, novo: false } };

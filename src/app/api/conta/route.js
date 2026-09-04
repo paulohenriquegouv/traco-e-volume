@@ -3,6 +3,7 @@ import {
   criarConta, autenticar, clienteAtual,
   criarTokenCliente, cookieDeSessao, cookieDeSaida,
 } from '@/lib/customer-auth';
+import { enviarVerificacao } from '@/app/api/conta/verificar/route';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,12 @@ export async function POST(request) {
 
     if (resultado.erro) {
       return NextResponse.json({ erro: resultado.erro }, { status: 400 });
+    }
+
+    // Cadastro dispara a confirmação de e-mail. Não espera o envio: SMTP lento
+    // não pode segurar a conclusão do cadastro.
+    if (acao === 'cadastrar') {
+      enviarVerificacao(resultado.cliente).catch(e => console.error('[conta] verificação falhou:', e?.message));
     }
 
     const token = await criarTokenCliente({ id: resultado.cliente.id, email: resultado.cliente.email });
