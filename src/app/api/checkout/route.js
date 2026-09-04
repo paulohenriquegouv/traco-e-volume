@@ -100,6 +100,7 @@ export async function POST(request) {
         street_name: end.address,
         street_number: end.number || 'S/N',
         neighborhood: end.neighborhood || end.city,
+        ...(end.complement ? { complement: end.complement } : {}),
         city: end.city,
         federal_unit: end.state.toUpperCase().slice(0, 2),
       };
@@ -128,8 +129,22 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Método inválido' }, { status: 400 });
   } catch (error) {
     console.error('Erro checkout:', error?.message, JSON.stringify(error?.cause || {}));
-    // A causa do MP diz o que faltou; sem isso o cliente so via "Erro ao processar pagamento"
-    const motivo = error?.cause?.[0]?.description || error?.cause?.error?.causes?.[0]?.description || '';
-    return NextResponse.json({ error: motivo ? 'Pagamento recusado: ' + motivo : 'Erro ao processar pagamento', details: error.message }, { status: 500 });
+    // A causa do MP diz o que faltou, mas em ingles e em jargao. Traduz o que o
+    // cliente pode resolver sozinho; o resto vai como veio.
+    const motivo = error?.cause?.[0]?.description || error?.cause?.error?.causes?.[0]?.description || error?.message || '';
+    const traducoes = [
+      [/invalid transaction_amount/i, 'O valor do pedido é baixo demais para boleto. Use Pix ou cartão para valores pequenos.'],
+      [/collector.*(not allowed|cannot).*payer|payer.*(is|equals).*collector/i, 'Não é possível pagar uma compra da sua própria loja. Use outro cartão ou conta.'],
+      [/invalid users involved/i, 'Não é possível pagar uma compra da sua própria loja. Use outro cartão ou conta.'],
+      [/invalid parameter zip_code|zip_code/i, 'CEP inválido. Confira o CEP informado.'],
+      [/invalid parameter identification|identification/i, 'CPF/CNPJ inválido. Confira o documento informado.'],
+      [/invalid card token|card_token/i, 'Os dados do cartão expiraram. Preencha o cartão novamente.'],
+      [/(email|payer.email)/i, 'E-mail inválido. Confira o endereço informado.'],
+    ];
+    const amigavel = traducoes.find(([re]) => re.test(motivo))?.[1];
+    return NextResponse.json({
+      error: amigavel || (motivo ? 'Pagamento recusado: ' + motivo : 'Erro ao processar pagamento'),
+      details: error.message,
+    }, { status: 500 });
   }
 }

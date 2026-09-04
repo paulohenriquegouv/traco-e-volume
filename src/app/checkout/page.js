@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -35,7 +35,9 @@ const METHODS = [
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, clearCart } = useCart();
-  const [f, setF] = useState({ name: '', email: '', phone: '', document: '', address: '', number: '', neighborhood: '', city: '', state: '', zip: '' });
+  const [f, setF] = useState({ name: '', email: '', phone: '', document: '', address: '', number: '', complement: '', neighborhood: '', city: '', state: '', zip: '' });
+  const [cepStatus, setCepStatus] = useState('');
+  const campoNumero = useRef(null);
   const [method, setMethod] = useState('pix');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,13 +52,44 @@ export default function CheckoutPage() {
     );
   }
 
+  // CEP: formata enquanto digita e, ao completar 8 digitos, busca o endereco.
+  // Os campos preenchidos continuam editaveis -- a busca so adianta o trabalho.
+  const mudarCep = (valor) => {
+    const digitos = valor.replace(/\D/g, '').slice(0, 8);
+    const formatado = digitos.length > 5 ? `${digitos.slice(0, 5)}-${digitos.slice(5)}` : digitos;
+    setF(prev => ({ ...prev, zip: formatado }));
+    if (digitos.length < 8) { setCepStatus(''); return; }
+    buscarCep(digitos);
+  };
+
+  const buscarCep = async (cep) => {
+    setCepStatus('buscando');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const d = await res.json();
+      if (d.erro) { setCepStatus('erro'); return; }
+      setF(prev => ({
+        ...prev,
+        address: d.logradouro || prev.address,
+        neighborhood: d.bairro || prev.neighborhood,
+        city: d.localidade || prev.city,
+        state: d.uf || prev.state,
+      }));
+      setCepStatus('ok');
+      // O que falta digitar depois do CEP e o numero: leva o cursor para la
+      setTimeout(() => campoNumero.current?.focus(), 100);
+    } catch {
+      setCepStatus('erro');
+    }
+  };
+
   const dadosPessoaisOk = f.name.trim() && f.email.trim();
 
   // Usado pelos dois fluxos: Pix/boleto pelo botão, cartão pelo brick (que manda o token)
   const enviarPedido = async (extra = {}) => {
     setError('');
     const res = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity })), customer_name: f.name, customer_email: f.email, customer_phone: f.phone, customer_document: f.document, shipping_address: { address: f.address, number: f.number, neighborhood: f.neighborhood, city: f.city, state: f.state, zip: f.zip }, payment_method: method, shipping: 0, ...extra }),
+      body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity })), customer_name: f.name, customer_email: f.email, customer_phone: f.phone, customer_document: f.document, shipping_address: { address: f.address, number: f.number, complement: f.complement, neighborhood: f.neighborhood, city: f.city, state: f.state, zip: f.zip }, payment_method: method, shipping: 0, ...extra }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erro no pagamento');
@@ -136,29 +169,47 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
           <div className="bg-white rounded-xl border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-4">Endereço de Entrega</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* CEP primeiro: preenche o resto sozinho, mas nada fica travado */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CEP{method === 'boleto' ? ' *' : ''}
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={f.zip}
+                  onChange={e => mudarCep(e.target.value)}
+                  placeholder="00000-000"
+                  maxLength={9}
+                  className={ic}
+                />
+                {cepStatus === 'buscando' && <p className="text-xs text-gray-400 mt-1">Buscando endereço...</p>}
+                {cepStatus === 'ok' && <p className="text-xs text-green-600 mt-1">Endereço preenchido — confira e complete o número.</p>}
+                {cepStatus === 'erro' && <p className="text-xs text-amber-600 mt-1">CEP não encontrado. Preencha o endereço manualmente.</p>}
+              </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Endereço{method === 'boleto' ? ' *' : ''}</label>
-                <input type="text" value={f.address} onChange={e => setF({...f, address: e.target.value})} className={ic} />
+                <input type="text" value={f.address} onChange={e => setF({...f, address: e.target.value})} className={ic} placeholder="Rua, avenida..." />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Número</label>
-                <input type="text" value={f.number} onChange={e => setF({...f, number: e.target.value})} className={ic} />
+                <input type="text" value={f.number} onChange={e => setF({...f, number: e.target.value})} className={ic} ref={campoNumero} />
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+                <input type="text" value={f.complement} onChange={e => setF({...f, complement: e.target.value})} className={ic} placeholder="Apto, bloco, ponto de referência" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
                 <input type="text" value={f.neighborhood} onChange={e => setF({...f, neighborhood: e.target.value})} className={ic} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade{method === 'boleto' ? ' *' : ''}</label>
                 <input type="text" value={f.city} onChange={e => setF({...f, city: e.target.value})} className={ic} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                <input type="text" value={f.state} onChange={e => setF({...f, state: e.target.value})} className={ic} maxLength={2} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
-                <input type="text" value={f.zip} onChange={e => setF({...f, zip: e.target.value})} className={ic} />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Estado{method === 'boleto' ? ' *' : ''}</label>
+                <input type="text" value={f.state} onChange={e => setF({...f, state: e.target.value.toUpperCase()})} className={ic} maxLength={2} placeholder="UF" />
               </div>
             </div>
           </div>
