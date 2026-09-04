@@ -138,12 +138,16 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
     // enquanto o checkout está aberto.
   }, [containerId]);
 
+  // O container precisa ser SEMPRE o primeiro filho, sem irmao condicional antes
+  // dele: quando o aviso de carregamento some, o React compara os filhos por
+  // posicao, ve tipos diferentes no indice 0 e recria o elemento -- levando junto
+  // o formulario que o Mercado Pago tinha acabado de montar dentro.
   return (
     <div>
+      <div key="container-brick" id={containerId} />
       {!pronto && !erro && (
         <p className="text-sm text-gray-500 py-4">Carregando formulário seguro do Mercado Pago...</p>
       )}
-      <div id={containerId} />
       {erro && <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm mt-3">{erro}</div>}
     </div>
   );
