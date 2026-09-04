@@ -20,6 +20,7 @@
     "migrar-tokens": "node scripts/migrar-tokens.js"
   },
   "dependencies": {
+    "@vercel/functions": "^3.9.5",
     "bcryptjs": "^2.4.3",
     "jose": "^5.6.0",
     "mercadopago": "^2.3.0",

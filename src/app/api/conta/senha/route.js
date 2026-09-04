@@ -30,8 +30,9 @@ export async function POST(request) {
     const cliente = await db.prepare('SELECT id, name, email FROM customers WHERE email = ?').get(limpo);
     if (!cliente) return NextResponse.json(RESPOSTA);
 
-    // Não espera o envio: SMTP lento não pode travar a tela do cliente
-    enviarLinkDeSenha(cliente).catch(e => console.error('[senha] envio falhou:', e?.message));
+    // Aguarda a criação do token (rápida); o envio em si a função supervisiona
+    // com waitUntil, sem atrasar a resposta.
+    await enviarLinkDeSenha(cliente).catch(e => console.error('[senha] envio falhou:', e?.message));
 
     return NextResponse.json(RESPOSTA);
   } catch (e) {

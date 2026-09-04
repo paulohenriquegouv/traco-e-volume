@@ -14,7 +14,8 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, mensagem: 'Seu e-mail já está confirmado.' });
   }
 
-  enviarVerificacao(cliente).catch(e => console.error('[verificar] envio falhou:', e?.message));
+  // Aguarda só a criação do token; o envio segue em segundo plano supervisionado
+  await enviarVerificacao(cliente).catch(e => console.error('[verificar] envio falhou:', e?.message));
   return NextResponse.json({ ok: true, mensagem: 'Enviamos o link de confirmação para o seu e-mail.' });
 }
 

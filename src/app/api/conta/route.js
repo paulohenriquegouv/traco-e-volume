@@ -49,7 +49,7 @@ export async function POST(request) {
     // Cadastro dispara a confirmação de e-mail. Não espera o envio: SMTP lento
     // não pode segurar a conclusão do cadastro.
     if (acao === 'cadastrar') {
-      enviarVerificacao(resultado.cliente).catch(e => console.error('[conta] verificação falhou:', e?.message));
+      await enviarVerificacao(resultado.cliente).catch(e => console.error('[conta] verificação falhou:', e?.message));
     }
 
     const token = await criarTokenCliente({ id: resultado.cliente.id, email: resultado.cliente.email });
