@@ -1,12 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCart } from './CartContext';
 
 export default function Header() {
   const { count, loaded } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cliente, setCliente] = useState(null);
+
+  // Descobre a sessão no cliente: o header é o mesmo componente em toda página,
+  // e uma consulta leve evita transformar tudo em renderização de servidor.
+  useEffect(() => {
+    fetch('/api/conta')
+      .then(r => r.json())
+      .then(d => setCliente(d.autenticado ? d.cliente : null))
+      .catch(() => setCliente(null));
+  }, []);
 
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
@@ -39,6 +49,15 @@ export default function Header() {
             >
               Instagram
             </a>
+            {cliente ? (
+              <Link href="/minha-conta" className="btn text-sm font-medium text-gray-600 hover:text-primary-600 transition-colors">
+                {cliente.nome.split(' ')[0]}
+              </Link>
+            ) : (
+              <Link href="/entrar" className="btn text-sm font-medium text-gray-600 hover:text-primary-600 transition-colors">
+                Entrar
+              </Link>
+            )}
           </nav>
 
           {/* Right */}

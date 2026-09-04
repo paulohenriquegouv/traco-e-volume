@@ -14,7 +14,8 @@
     "verifica-webhook": "node scripts/verifica-webhook.js",
     "backup": "node scripts/backup-banco.js",
     "restaurar": "node scripts/restaurar-banco.js",
-    "testar-banco": "node scripts/testar-banco.js"
+    "testar-banco": "node scripts/testar-banco.js",
+    "migrar-contas": "node scripts/migrar-contas.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

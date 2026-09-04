@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -38,6 +38,49 @@ export default function CheckoutPage() {
   const [f, setF] = useState({ name: '', email: '', phone: '', document: '', address: '', number: '', complement: '', neighborhood: '', city: '', state: '', zip: '' });
   const [cepStatus, setCepStatus] = useState('');
   const campoNumero = useRef(null);
+  const [cliente, setCliente] = useState(null);
+  const [enderecosSalvos, setEnderecosSalvos] = useState([]);
+
+  // Quem esta logado nao redigita nada: dados e endereco padrao ja vem preenchidos
+  useEffect(() => {
+    let vivo = true;
+    fetch('/api/conta')
+      .then(r => r.json())
+      .then(d => {
+        if (!vivo || !d.autenticado) return;
+        setCliente(d.cliente);
+        setF(prev => ({
+          ...prev,
+          name: prev.name || d.cliente.nome,
+          email: prev.email || d.cliente.email,
+          phone: prev.phone || d.cliente.telefone,
+          document: prev.document || d.cliente.documento,
+        }));
+        return fetch('/api/conta/enderecos').then(r => r.json()).then(e => {
+          if (!vivo) return;
+          const lista = e.enderecos || [];
+          setEnderecosSalvos(lista);
+          const padrao = lista.find(x => x.padrao) || lista[0];
+          if (padrao) aplicarEndereco(padrao);
+        });
+      })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, []);
+
+  const aplicarEndereco = (e) => {
+    const cep = String(e.zip || '').replace(/\D/g, '');
+    setF(prev => ({
+      ...prev,
+      zip: cep.length > 5 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : cep,
+      address: e.address || '',
+      number: e.number || '',
+      complement: e.complement || '',
+      neighborhood: e.neighborhood || '',
+      city: e.city || '',
+      state: e.state || '',
+    }));
+  };
   const [method, setMethod] = useState('pix');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -166,8 +209,37 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
               </div>
             </div>
           </div>
+          {!cliente && (
+            <div className="bg-primary-50 border border-primary-100 rounded-lg p-4 text-sm text-primary-900">
+              Já tem conta?{' '}
+              <a href={`/entrar?destino=${encodeURIComponent('/checkout')}`} className="btn font-medium underline">
+                Entre
+              </a>{' '}
+              e seus dados vêm preenchidos. Comprar sem conta também funciona.
+            </div>
+          )}
+
           <div className="bg-white rounded-xl border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-4">Endereço de Entrega</h3>
+
+            {enderecosSalvos.length > 0 && (
+              <div className="mb-4 pb-4 border-b border-gray-100">
+                <p className="text-sm font-medium text-gray-700 mb-2">Endereços salvos</p>
+                <div className="flex flex-wrap gap-2">
+                  {enderecosSalvos.map(e => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => aplicarEndereco(e)}
+                      className="btn text-left border border-gray-200 hover:border-primary-400 rounded-lg px-3 py-2 text-xs text-gray-600"
+                    >
+                      <span className="block font-medium text-gray-900">{e.apelido || e.city}</span>
+                      {e.address}{e.number ? `, ${e.number}` : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* CEP primeiro: preenche o resto sozinho, mas nada fica travado */}
               <div>

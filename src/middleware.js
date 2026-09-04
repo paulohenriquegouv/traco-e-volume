@@ -14,13 +14,37 @@ import { jwtVerify } from 'jose';
  */
 
 const COOKIE_NAME = 'tv_admin_token';
+const COOKIE_CLIENTE = 'tv_cliente_token';
 
 const secret = new TextEncoder().encode(
   process.env.JWT_SECRET || 'fallback-secret-do-not-use-in-production'
 );
 
+// Sufixo diferente: um token de cliente nunca vale como token de admin
+const segredoCliente = new TextEncoder().encode(
+  (process.env.JWT_SECRET || 'fallback-secret-do-not-use-in-production') + ':cliente'
+);
+
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
+
+  // Area do cliente: mesma logica do admin, cookie e segredo proprios. Barrar aqui
+  // evita que a pagina chegue a ser montada no servidor para quem nao esta logado.
+  if (pathname.startsWith('/minha-conta')) {
+    const tokenCliente = request.cookies.get(COOKIE_CLIENTE)?.value;
+    if (tokenCliente) {
+      try {
+        await jwtVerify(tokenCliente, segredoCliente);
+        return NextResponse.next();
+      } catch {
+        // expirado ou adulterado: trata como ausente
+      }
+    }
+    const login = request.nextUrl.clone();
+    login.pathname = '/entrar';
+    login.search = '?destino=' + encodeURIComponent(pathname);
+    return NextResponse.redirect(login);
+  }
 
   // A tela de login precisa ficar acessível, senão vira loop de redirecionamento
   if (pathname === '/admin/login') return NextResponse.next();
@@ -49,5 +73,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/admin', '/admin/:path*'],
+  matcher: ['/admin', '/admin/:path*', '/minha-conta', '/minha-conta/:path*'],
 };

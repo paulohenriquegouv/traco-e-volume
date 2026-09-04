@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { getDb } from '@/lib/db';
 import { generateOrderId } from '@/lib/auth';
+import { clienteAtual } from '@/lib/customer-auth';
 
 // CPF/CNPJ chega formatado do formulario; o MP so aceita digitos
 function onlyDigits(v) {
@@ -41,10 +42,12 @@ function documentoValido(doc) {
   return doc.length === 11 ? cpfValido(doc) : doc.length === 14 ? cnpjValido(doc) : false;
 }
 
-async function saveOrder(db, orderId, body, address, method, paymentId, total) {
+async function saveOrder(db, orderId, body, address, method, paymentId, total, clienteId = null) {
   const { customer_name, customer_email, customer_phone, customer_document } = body;
-  await db.prepare('INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, customer_document, shipping_address, payment_method, payment_id, payment_status, total, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-    orderId, customer_name, customer_email, customer_phone || '', customer_document || '',
+  // customer_id fica nulo na compra sem cadastro — e o pedido e adotado depois,
+  // quando a pessoa criar conta com o mesmo e-mail e confirma-lo.
+  await db.prepare('INSERT INTO orders (order_id, customer_id, customer_name, customer_email, customer_phone, customer_document, shipping_address, payment_method, payment_id, payment_status, total, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+    orderId, clienteId, customer_name, customer_email, customer_phone || '', customer_document || '',
     JSON.stringify(address), method, paymentId, 'pending', total, 'aguardando_pagamento'
   );
 }
@@ -65,6 +68,10 @@ export async function POST(request) {
     if (!body.customer_name?.trim()) return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
     if (!body.customer_email?.trim()) return NextResponse.json({ error: 'E-mail é obrigatório' }, { status: 400 });
 
+    // Quem esta logado tem o pedido ligado a conta na hora
+    const clienteLogado = await clienteAtual(request);
+    const clienteId = clienteLogado?.id || null;
+
     const orderId = generateOrderId();
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
     if (!accessToken) return NextResponse.json({ error: 'MP não configurado' }, { status: 500 });
@@ -78,7 +85,7 @@ export async function POST(request) {
 
     if (method === 'pix') {
       const r = await new Payment(client).create({ body: { transaction_amount: total, description: 'Pedido ' + orderId + ' - Traço & Volume', payment_method_id: 'pix', payer, external_reference: orderId, notification_url: process.env.NEXT_PUBLIC_SITE_URL + '/api/webhooks/mercadopago' } });
-      await saveOrder(db, orderId, body, body.shipping_address || {}, 'pix', r.id, total);
+      await saveOrder(db, orderId, body, body.shipping_address || {}, 'pix', r.id, total, clienteId);
       await saveOrderItems(db, orderId, body.items);
       return NextResponse.json({ success: true, order_id: orderId, payment_id: r.id, payment_method: 'pix', qr_code: r.point_of_interaction?.transaction_data?.qr_code || '', qr_code_base64: r.point_of_interaction?.transaction_data?.qr_code_base64 || '', ticket_url: r.point_of_interaction?.transaction_data?.ticket_url || '', status: r.status });
     }
@@ -107,7 +114,7 @@ export async function POST(request) {
         federal_unit: end.state.toUpperCase().slice(0, 2),
       };
       const r = await new Payment(client).create({ body: { transaction_amount: total, description: 'Pedido ' + orderId + ' - Traço & Volume', payment_method_id: 'bolbradesco', payer, external_reference: orderId, notification_url: process.env.NEXT_PUBLIC_SITE_URL + '/api/webhooks/mercadopago' } });
-      await saveOrder(db, orderId, body, body.shipping_address || {}, 'boleto', r.id, total);
+      await saveOrder(db, orderId, body, body.shipping_address || {}, 'boleto', r.id, total, clienteId);
       await saveOrderItems(db, orderId, body.items);
       return NextResponse.json({ success: true, order_id: orderId, payment_id: r.id, payment_method: 'boleto', boleto_url: r.transaction_details?.external_resource_url || '', boleto_barcode: r.barcode?.content || '', status: r.status });
     }
@@ -122,7 +129,7 @@ export async function POST(request) {
       const recusado = r.status === 'rejected' || r.status === 'cancelled';
       const statusPedido = r.status === 'approved' ? 'pago' : recusado ? 'cancelado' : 'aguardando_pagamento';
       const statusPagamento = r.status === 'approved' ? 'approved' : recusado ? r.status : 'pending';
-      await saveOrder(db, orderId, body, body.shipping_address || {}, 'card', r.id, total);
+      await saveOrder(db, orderId, body, body.shipping_address || {}, 'card', r.id, total, clienteId);
       await db.prepare('UPDATE orders SET payment_status = ?, status = ? WHERE order_id = ?').run(statusPagamento, statusPedido, orderId);
       await saveOrderItems(db, orderId, body.items);
       return NextResponse.json({ success: true, order_id: orderId, payment_id: r.id, payment_method: 'card', status: r.status, status_detail: r.status_detail, installments: r.installments });
