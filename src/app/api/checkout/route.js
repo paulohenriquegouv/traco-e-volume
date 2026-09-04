@@ -98,9 +98,11 @@ export async function POST(request) {
       payer.address = {
         zip_code: cep,
         street_name: end.address,
+        // O MP so aceita zip_code, street_name, street_number, neighborhood, city e
+        // federal_unit no payer.address. Nao existe campo de complemento: mandar um
+        // derruba a criacao inteira com "The name of the parameters is wrong".
         street_number: end.number || 'S/N',
         neighborhood: end.neighborhood || end.city,
-        ...(end.complement ? { complement: end.complement } : {}),
         city: end.city,
         federal_unit: end.state.toUpperCase().slice(0, 2),
       };
@@ -140,6 +142,7 @@ export async function POST(request) {
       [/invalid parameter identification|identification/i, 'CPF/CNPJ inválido. Confira o documento informado.'],
       [/invalid card token|card_token/i, 'Os dados do cartão expiraram. Preencha o cartão novamente.'],
       [/(email|payer.email)/i, 'E-mail inválido. Confira o endereço informado.'],
+      [/name of the parameters is wrong/i, 'Não foi possível gerar o boleto. Tente novamente ou use Pix ou cartão.'],
     ];
     const amigavel = traducoes.find(([re]) => re.test(motivo))?.[1];
     return NextResponse.json({
