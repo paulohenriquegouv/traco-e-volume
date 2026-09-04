@@ -86,7 +86,21 @@ async function main() {
     return;
   }
 
-  const sql = fs.readFileSync(arquivo, 'utf8');
+  let sql = fs.readFileSync(arquivo, 'utf8');
+
+  // Compatibilidade entre versoes: o MySQL 8 exporta collations que o 5.7 desconhece
+  // (utf8mb4_0900_ai_ci e a padrao do 8). Traduz para a equivalente universal.
+  const [[{ v: versaoDestino }]] = [await conn.query('SELECT VERSION() as v').then(r => r[0])];
+  console.log(`Servidor de destino: MySQL ${versaoDestino}`);
+  if (/^5\./.test(versaoDestino)) {
+    const antes = sql;
+    sql = sql
+      .replace(/utf8mb4_0900_ai_ci/g, 'utf8mb4_unicode_ci')
+      .replace(/utf8mb4_0900_as_cs/g, 'utf8mb4_unicode_ci')
+      .replace(/ COLLATE=utf8mb3_[a-z_]+/g, '')
+      .replace(/DEFAULT CHARSET=utf8mb3/g, 'DEFAULT CHARSET=utf8mb4');
+    if (antes !== sql) console.log('Ajustado para MySQL 5.x: collations traduzidas.');
+  }
   // Divide em comandos: o backup gera um comando por linha, sem ';' dentro de valores
   // que quebre a divisao (aspas sao escapadas na exportacao).
   const comandos = sql
