@@ -3,6 +3,28 @@
  * Não toca no banco real. Rodar com: node scripts/teste-webhook.js
  */
 const crypto = require('crypto');
+const path = require('path');
+
+/**
+ * Espião no lugar do módulo de e-mail.
+ *
+ * Precisa entrar no cache do require ANTES de webhook-mp ser carregado: o envio
+ * é exigido lá dentro de um try/catch que engole qualquer erro, então sem espião
+ * o teste passaria mesmo se o e-mail nunca fosse disparado.
+ */
+const espiaoEmail = { enviados: [], resposta: { ok: true }, erro: null };
+const caminhoEmail = require.resolve('../src/lib/email');
+require.cache[caminhoEmail] = {
+  id: caminhoEmail, filename: caminhoEmail, loaded: true, exports: {
+    async enviarConfirmacaoDePedido(dados) {
+      espiaoEmail.enviados.push(dados);
+      if (espiaoEmail.erro) throw espiaoEmail.erro;
+      return espiaoEmail.resposta;
+    },
+  },
+};
+function zerarEspiao() { espiaoEmail.enviados = []; espiaoEmail.resposta = { ok: true }; espiaoEmail.erro = null; }
+
 const { validarAssinatura, processarPagamento } = require('../src/lib/webhook-mp');
 
 // Silencia os logs da lógica para a saída do teste ficar limpa
@@ -41,6 +63,13 @@ function criarDbFalso({ pedido, itens = [], produtos = {} }) {
             if (estado.pedido.payment_status === 'approved') return { changes: 0 };
             Object.assign(estado.pedido, { payment_status: ps, status: st, payment_id: pid });
             return { changes: 1 };
+          }
+          if (sql.includes('email_confirmacao_em')) {
+            if (estado.pedido && estado.pedido.id === p[0]) {
+              estado.pedido.email_confirmacao_em = '2026-09-04 12:00:00';
+              return { changes: 1 };
+            }
+            return { changes: 0 };
           }
           if (sql.includes('UPDATE orders')) {
             const [ps, st, pid, oid] = p;
@@ -171,6 +200,69 @@ async function main() {
     const db = criarDbFalso({ pedido: pedidoBase, itens: [{ order_id: 1, product_id: null, quantity: 2 }], produtos: { 10: 5 } });
     const r = await processarPagamento(db, { status: 'approved', external_reference: 'TV2026090100001' }, '111');
     checar('item com product_id nulo nao quebra', r.corpo.ok === true && db.estado.pedido.status === 'pago');
+  }
+
+  print('');
+  print('=== E-MAIL DE CONFIRMACAO ===');
+
+  // 12. Pagamento aprovado avisa o cliente
+  {
+    zerarEspiao();
+    const pedido = {
+      ...pedidoBase,
+      customer_name: 'Maria Souza',
+      shipping_address: JSON.stringify({ address: 'Rua A', number: '10', city: 'Belem', state: 'PA' }),
+    };
+    const db = criarDbFalso({ pedido, itens: itensBase, produtos: produtosBase });
+    await processarPagamento(db, { status: 'approved', external_reference: 'TV2026090100001' }, '111');
+    const e = espiaoEmail.enviados[0];
+    checar('aprovado envia confirmacao ao cliente',
+      espiaoEmail.enviados.length === 1 && e && e.para === 'cliente@teste.com');
+    checar('confirmacao leva pedido, total e itens',
+      e && e.pedido.order_id === 'TV2026090100001' && e.pedido.total === 150 && e.itens.length === 2);
+    checar('confirmacao leva o endereco de entrega', e && e.endereco.city === 'Belem');
+    checar('envio bem-sucedido carimba email_confirmacao_em', !!db.estado.pedido.email_confirmacao_em);
+  }
+
+  // 13. Notificação repetida do MP não pode mandar o e-mail duas vezes
+  {
+    zerarEspiao();
+    const db = criarDbFalso({ pedido: pedidoBase, itens: itensBase, produtos: produtosBase });
+    await processarPagamento(db, { status: 'approved', external_reference: 'TV2026090100001' }, '111');
+    await processarPagamento(db, { status: 'approved', external_reference: 'TV2026090100001' }, '111');
+    checar('webhook repetido nao reenvia o e-mail',
+      espiaoEmail.enviados.length === 1, `-> ${espiaoEmail.enviados.length} envios`);
+  }
+
+  // 14. Só o pagamento aprovado avisa
+  {
+    for (const status of ['rejected', 'pending', 'refunded', 'in_process']) {
+      zerarEspiao();
+      const db = criarDbFalso({ pedido: pedidoBase, itens: itensBase, produtos: produtosBase });
+      await processarPagamento(db, { status, external_reference: 'TV2026090100001' }, '111');
+      checar(`${status} nao dispara e-mail`, espiaoEmail.enviados.length === 0);
+    }
+  }
+
+  // 15. SMTP fora do ar não derruba o webhook — o MP precisa do 200
+  {
+    zerarEspiao();
+    espiaoEmail.erro = new Error('ECONNREFUSED smtp');
+    const db = criarDbFalso({ pedido: pedidoBase, itens: itensBase, produtos: produtosBase });
+    const r = await processarPagamento(db, { status: 'approved', external_reference: 'TV2026090100001' }, '111');
+    checar('e-mail que estoura ainda responde 200', r.http === 200 && r.corpo.ok === true);
+    checar('e-mail que estoura nao impede a baixa de estoque', db.estado.produtos[10] === 3);
+    checar('e-mail que estoura nao carimba email_confirmacao_em', !db.estado.pedido.email_confirmacao_em);
+  }
+
+  // 16. Envio recusado (o SMTP respondeu, mas não entregou) não pode carimbar
+  {
+    zerarEspiao();
+    espiaoEmail.resposta = { ok: false, motivo: 'caixa inexistente' };
+    const db = criarDbFalso({ pedido: pedidoBase, itens: itensBase, produtos: produtosBase });
+    await processarPagamento(db, { status: 'approved', external_reference: 'TV2026090100001' }, '111');
+    checar('envio recusado nao carimba email_confirmacao_em', !db.estado.pedido.email_confirmacao_em);
+    checar('envio recusado ainda deixa o pedido pago', db.estado.pedido.status === 'pago');
   }
 
   print('\n=== ASSINATURA HMAC ===');
