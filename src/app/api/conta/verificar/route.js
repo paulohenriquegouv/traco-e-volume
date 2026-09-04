@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { criarToken, consumirToken } from '@/lib/tokens';
-import { enviarVerificacaoDeEmail } from '@/lib/email';
+import { consumirToken } from '@/lib/tokens';
+import { enviarVerificacao } from '@/lib/fluxos-email';
 import { clienteAtual, adotarPedidosAntigos } from '@/lib/customer-auth';
 
 export const dynamic = 'force-dynamic';
-
-const enderecoDaLoja = () => process.env.NEXT_PUBLIC_SITE_URL || 'https://traco-e-volume.vercel.app';
-
-/** Dispara o e-mail de verificação. Usado no cadastro e no botão "reenviar". */
-export async function enviarVerificacao(cliente) {
-  const token = await criarToken(cliente.id, 'verificacao');
-  const url = `${enderecoDaLoja()}/verificar-email?token=${token}`;
-  return enviarVerificacaoDeEmail({ para: cliente.email, nome: cliente.name || cliente.nome, url });
-}
 
 /** POST — reenviar para quem está logado */
 export async function POST(request) {

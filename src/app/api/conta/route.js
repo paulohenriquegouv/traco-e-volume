@@ -3,7 +3,7 @@ import {
   criarConta, autenticar, clienteAtual,
   criarTokenCliente, cookieDeSessao, cookieDeSaida,
 } from '@/lib/customer-auth';
-import { enviarVerificacao } from '@/app/api/conta/verificar/route';
+import { enviarVerificacao } from '@/lib/fluxos-email';
 
 export const dynamic = 'force-dynamic';
 

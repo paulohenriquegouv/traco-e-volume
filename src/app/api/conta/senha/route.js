@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { getDb } from '@/lib/db';
-import { criarToken, conferirToken, consumirToken } from '@/lib/tokens';
-import { enviarRecuperacaoDeSenha } from '@/lib/email';
+import { conferirToken, consumirToken } from '@/lib/tokens';
+import { enviarLinkDeSenha } from '@/lib/fluxos-email';
 import { problemaNaSenha, emailValido } from '@/lib/customer-auth';
 
 export const dynamic = 'force-dynamic';
@@ -30,12 +30,8 @@ export async function POST(request) {
     const cliente = await db.prepare('SELECT id, name, email FROM customers WHERE email = ?').get(limpo);
     if (!cliente) return NextResponse.json(RESPOSTA);
 
-    const token = await criarToken(cliente.id, 'senha');
-    const url = `${enderecoDaLoja()}/redefinir-senha?token=${token}`;
-
     // Não espera o envio: SMTP lento não pode travar a tela do cliente
-    enviarRecuperacaoDeSenha({ para: cliente.email, nome: cliente.name, url })
-      .catch(e => console.error('[senha] envio falhou:', e?.message));
+    enviarLinkDeSenha(cliente).catch(e => console.error('[senha] envio falhou:', e?.message));
 
     return NextResponse.json(RESPOSTA);
   } catch (e) {
