@@ -60,7 +60,15 @@ async function abrirPool(config, comSsl) {
     database: config.database,
     ...(comSsl ? { ssl: { rejectUnauthorized: false } } : {}),
     waitForConnections: true,
-    connectionLimit: 10,
+    // Serverless multiplica pools: cada instancia da funcao cria o seu. Com 10
+    // conexoes cada, tres instancias ja estouram o max_user_connections=30 do
+    // DBaaS da Locaweb, e o site cai no banco vazio. Pool pequeno e conexao
+    // ociosa devolvida rapido mantem o consumo baixo.
+    connectionLimit: 3,
+    maxIdle: 1,
+    idleTimeout: 20000,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
     queueLimit: 0,
   });
   await p.execute('SELECT 1');
