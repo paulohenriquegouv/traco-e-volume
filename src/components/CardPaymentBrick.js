@@ -75,8 +75,38 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
         await carregarSdk();
         if (!vivo) return;
 
+        // O onload do script nao significa SDK pronto: ele ainda faz inicializacao
+        // interna (device profiling). Criar o brick cedo demais falha com
+        // "Bricks component initialization failed" e nada e desenhado. Por isso as
+        // tentativas com espera crescente -- criar manualmente segundos depois
+        // sempre funcionou.
+        await new Promise(r => setTimeout(r, 400));
+        if (!vivo) return;
+
+        const criado = await criarComTentativas(publicKey);
+        if (!criado) return;
+        controller = criado;
+        setErro(''); // uma tentativa anterior pode ter deixado aviso na tela
+        setPronto(true);
+      } catch (e) {
+        console.error('[cartao] falha ao montar o formulário:', e);
+        if (vivo) setErro('Não foi possível carregar o formulário de cartão. Recarregue a página.');
+      }
+    }
+
+    async function criarComTentativas(publicKey) {
+      const esperas = [0, 1500, 3000];
+      for (let i = 0; i < esperas.length; i++) {
+        if (esperas[i]) await new Promise(r => setTimeout(r, esperas[i]));
+        if (!vivo) return null;
+
+        const container = document.getElementById(containerId);
+        if (container) container.innerHTML = '';
+
         const mp = new window.MercadoPago(publicKey, { locale: 'pt-BR' });
-        const criado = await mp.bricks().create('cardPayment', containerId, {
+        let criado = null;
+        try {
+          criado = await mp.bricks().create('cardPayment', containerId, {
           initialization: {
             amount: Number(amountRef.current),
             ...(emailRef.current ? { payer: { email: emailRef.current } } : {}),
@@ -105,27 +135,24 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
           },
         });
 
-        if (!vivo) {
-          try { criado?.unmount?.(); } catch {}
-          return;
+        } catch (e) {
+          console.warn(`[cartao] tentativa ${i + 1} falhou:`, e?.message || e);
         }
-        controller = criado;
 
-        // A criação pode resolver sem desenhar nada (já aconteceu). Sem esta
-        // checagem o cliente ficaria olhando um espaço vazio, sem botão nenhum.
+        if (!vivo) { try { criado?.unmount?.(); } catch {} return null; }
+
+        // A criação pode resolver sem desenhar nada: confirma pelo DOM
         await new Promise(r => setTimeout(r, 1200));
-        if (!vivo) return;
-        const montou = (document.getElementById(containerId)?.childElementCount || 0) > 0;
-        if (!montou) {
-          console.error('[cartao] brick criado mas nao renderizou');
-          setErro('Não foi possível carregar o formulário de cartão. Recarregue a página ou pague com Pix.');
-          return;
-        }
-        setPronto(true);
-      } catch (e) {
-        console.error('[cartao] falha ao montar o formulário:', e);
-        if (vivo) setErro('Não foi possível carregar o formulário de cartão. Recarregue a página.');
+        if (!vivo) return null;
+        if ((document.getElementById(containerId)?.childElementCount || 0) > 0) return criado;
+
+        console.warn(`[cartao] tentativa ${i + 1}: brick nao renderizou`);
+        try { criado?.unmount?.(); } catch {}
       }
+
+      console.error('[cartao] o formulário não renderizou depois de 3 tentativas');
+      if (vivo) setErro('Não foi possível carregar o formulário de cartão. Recarregue a página ou pague com Pix.');
+      return null;
     }
 
     montar();
