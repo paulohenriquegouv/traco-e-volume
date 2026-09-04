@@ -74,7 +74,7 @@ function SuccessContent() {
               <p className="text-xs text-gray-500 break-all bg-white p-3 rounded border">{qrCode}</p>
             </div>
             <button onClick={copiar}
-              className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg text-sm font-medium">
+              className="btn-3d bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg text-sm font-medium">
               {copiado ? 'Código copiado!' : 'Copiar Código Pix'}
             </button>
             <p className="text-xs text-gray-400 mt-4">
@@ -88,7 +88,7 @@ function SuccessContent() {
             <h3 className="font-semibold text-gray-900 mb-2">Boleto Bancário</h3>
             <p className="text-sm text-gray-500 mb-4">Clique no botão abaixo para visualizar e imprimir:</p>
             <a href={boletoUrl} target="_blank" rel="noopener noreferrer"
-              className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg text-sm font-medium inline-block">
+              className="btn-3d bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg text-sm font-medium inline-block">
               Ver Boleto
             </a>
           </div>
@@ -106,7 +106,7 @@ function SuccessContent() {
         )}
 
         <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6">
-          <Link href="/produtos" className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium">
+          <Link href="/produtos" className="btn-3d bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium">
             Continuar Comprando
           </Link>
           <Link href={`/pedido?id=${orderId}`} className="bg-white border border-gray-200 hover:border-primary-300 text-gray-700 px-6 py-2.5 rounded-lg text-sm font-medium">

@@ -53,7 +53,8 @@ export default function AdminLoginPage() {
 
           <button type="submit" disabled={loading}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2.5 rounded-lg font-medium disabled:opacity-50">
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading && <span className="spinner" aria-hidden="true" />}
+          {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
       </div>

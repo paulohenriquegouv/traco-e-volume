@@ -26,7 +26,7 @@ export default function CartPage() {
           </svg>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Carrinho Vazio</h1>
           <p className="text-gray-500 mb-6">Seu carrinho está vazio. Explore nossos produtos!</p>
-          <Link href="/produtos" className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg font-medium inline-block">
+          <Link href="/produtos" className="btn-3d bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg font-medium inline-block">
             Ver Produtos
           </Link>
         </div>

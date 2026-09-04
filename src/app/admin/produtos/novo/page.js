@@ -139,6 +139,7 @@ export default function NovoProdutoPage() {
 
         <button type="submit" disabled={loading}
           className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg font-medium disabled:opacity-50">
+          {loading && <span className="spinner" aria-hidden="true" />}
           {loading ? 'Salvando...' : 'Salvar Produto'}
         </button>
       </form>

@@ -258,8 +258,17 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
           {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm">{error}</div>}
 
           {method !== 'card' && (
-            <button type="submit" form="form-checkout" disabled={loading} className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium disabled:opacity-50">
-              {loading ? 'Processando...' : 'Finalizar Pedido'}
+            <button
+              type="submit"
+              form="form-checkout"
+              disabled={loading}
+              aria-busy={loading || undefined}
+              className="btn-3d w-full inline-flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium disabled:opacity-75"
+            >
+              {loading && <span className="spinner" aria-hidden="true" />}
+              {loading
+                ? (method === 'pix' ? 'Gerando código Pix...' : 'Gerando boleto...')
+                : 'Finalizar Pedido'}
             </button>
           )}
         </div>

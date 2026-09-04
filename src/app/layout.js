@@ -2,6 +2,7 @@ import './globals.css';
 import { CartProvider } from '@/components/CartContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import NavegacaoRapida from '@/components/NavegacaoRapida';
 
 export const metadata = {
   title: 'Traço & Volume — Impressão 3D',
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
       <body className="min-h-screen flex flex-col bg-gray-50">
         <CartProvider>
           <Header />
+          <NavegacaoRapida />
           <main className="flex-1">{children}</main>
           <Footer />
         </CartProvider>

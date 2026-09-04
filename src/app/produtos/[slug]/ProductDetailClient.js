@@ -68,7 +68,7 @@ export default function ProductDetailClient({ product }) {
               <span className="px-3 py-2 text-gray-900 font-medium w-12 text-center">{quantity}</span>
               <button onClick={() => setQuantity(quantity + 1)} className="px-3 py-2 text-gray-500 hover:text-gray-900">+</button>
             </div>
-            <button onClick={handleAdd} className={`flex-1 py-3 rounded-lg font-medium transition-all ${added ? 'bg-green-500 text-white' : 'bg-primary-600 hover:bg-primary-700 text-white'}`}>
+            <button onClick={handleAdd} className={`btn-3d flex-1 py-3 rounded-lg font-medium transition-all ${added ? 'bg-green-500 text-white' : 'bg-primary-600 hover:bg-primary-700 text-white'}`}>
               {added ? '✓ Adicionado!' : 'Adicionar ao Carrinho'}
             </button>
           </div>
