@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="Produto sem foto">
+  <rect width="400" height="400" fill="#f1f5f9"/>
+  <g fill="none" stroke="#cbd5e1" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="120" y="130" width="160" height="130" rx="10"/>
+    <circle cx="163" cy="172" r="14"/>
+    <path d="M126 232l44-44 34 34 26-26 44 44"/>
+  </g>
+  <text x="200" y="300" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="20" fill="#94a3b8">Sem foto</text>
+</svg>

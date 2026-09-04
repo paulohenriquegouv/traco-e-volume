@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import ProductCard from '@/components/ProductCard';
+import FiltroCategorias from '@/components/FiltroCategorias';
 
 async function getProducts(searchParams) {
   try {
@@ -48,22 +49,7 @@ export default async function ProdutosPage({ searchParams }) {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar */}
         <aside className="lg:w-56 shrink-0">
-          <div className="bg-white rounded-xl border border-gray-100 p-4 md:p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Categorias</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/produtos" className={`text-sm ${!cat ? 'text-primary-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}>Todas</Link>
-              </li>
-              {categories.map(c => (
-                <li key={c.category}>
-                  <Link href={`/produtos?categoria=${encodeURIComponent(c.category)}`}
-                    className={`text-sm ${cat === c.category ? 'text-primary-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}>
-                    {c.category.charAt(0).toUpperCase() + c.category.slice(1)} ({c.count})
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <FiltroCategorias categorias={categories} categoriaAtual={cat} />
         </aside>
 
         {/* Grid */}
