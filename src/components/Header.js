@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useCart } from './CartContext';
+import { LogoMarca } from './Logo';
 
 export default function Header() {
   const { count, loaded } = useCart();
@@ -24,9 +25,7 @@ export default function Header() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-800 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-              T&V
-            </div>
+            <LogoMarca className="h-11 md:h-14 w-auto shrink-0" />
             <div>
               <span className="text-lg font-bold text-gray-900">Traço & Volume</span>
               <span className="hidden sm:inline text-xs text-gray-400 ml-1">impressão 3D</span>

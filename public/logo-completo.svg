@@ -1,0 +1,9 @@
+<svg viewBox="0 0 340 104" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Traço &amp; Volume">
+  <title>Traço &amp; Volume</title>
+  <ellipse cx="170" cy="95" rx="92" ry="5" fill="#3730a3" opacity="0.12"/>
+  <path d="M 14,48 A 156,34 0 0 1 326,48" fill="none" stroke="#f97316" stroke-width="8" stroke-linecap="round" transform="rotate(-7 170 48)"/>
+  <text x="170" y="48" text-anchor="middle" dominant-baseline="central"
+        font-family="Inter, system-ui, sans-serif" font-size="29" font-weight="800"
+        letter-spacing="-0.8" fill="#3730a3">Traço &amp; Volume</text>
+  <path d="M 326,48 A 156,34 0 0 1 14,48" fill="none" stroke="#f97316" stroke-width="8" stroke-linecap="round" transform="rotate(-7 170 48)"/>
+</svg>

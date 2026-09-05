@@ -251,6 +251,27 @@ a:focus-visible {
   z-index: 60;
 }
 
+
+/* ---- Marca: o anel orbita e a peça flutua ------------------------------- */
+/* O nome da loja é "traço que vira volume"; o movimento existe para sugerir
+   isso. É de propósito lento e curto: logo que dança demais cansa. */
+@keyframes logo-flutuar {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+@keyframes logo-inclinar {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(4deg); }
+}
+.logo-flutua { animation: logo-flutuar 4.5s ease-in-out infinite; }
+.logo-anel {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: logo-inclinar 9s ease-in-out infinite;
+}
+/* No hover o anel acelera — dá resposta ao clique sem precisar de outra cor */
+a:hover .logo-anel { animation-duration: 3s; }
+
 /* Respeita quem pediu menos animação no sistema */
 @media (prefers-reduced-motion: reduce) {
   button, .btn, a.btn { transition: none; }
@@ -261,4 +282,5 @@ a:focus-visible {
   .btn-3d:not(:disabled):active { transform: none; }
   .spinner { animation-duration: 1.5s; }
   .barra-progresso { animation: none; opacity: 0.8; }
+  .logo-flutua, .logo-anel { animation: none; }
 }
