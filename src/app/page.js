@@ -54,7 +54,7 @@ export default async function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {categories.map(cat => (
                 <Link key={cat.category} href={`/produtos?categoria=${encodeURIComponent(cat.category)}`}
-                  className="bg-gray-50 hover:bg-primary-50 border border-gray-100 hover:border-primary-200 rounded-xl p-6 text-center transition-all group">
+                  className="card-3d bg-white hover:bg-primary-50 border border-gray-200 hover:border-primary-200 rounded-xl p-6 text-center group">
                   <p className="font-semibold text-gray-900 group-hover:text-primary-600 capitalize">{cat.category}</p>
                   <p className="text-sm text-gray-400 mt-1">{cat.count} produto{cat.count > 1 ? 's' : ''}</p>
                 </Link>

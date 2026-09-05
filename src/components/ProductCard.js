@@ -14,7 +14,7 @@ export default function ProductCard({ product }) {
     : 0;
 
   return (
-    <div className="group bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg hover:border-gray-200 transition-all duration-300">
+    <div className="card-3d group bg-white rounded-xl border border-gray-200 overflow-hidden">
       {/* Image */}
       <Link href={`/produtos/${product.slug}`} className="relative block aspect-square bg-gray-50 overflow-hidden">
         <img

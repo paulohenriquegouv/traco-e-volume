@@ -41,7 +41,7 @@ export default function FiltroCategorias({ categorias, categoriaAtual }) {
   );
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 md:p-6">
+    <div className="card-3d bg-white rounded-xl border border-gray-200 p-4 md:p-6">
       {/* Celular: cabeçalho clicável que abre e fecha */}
       <button
         type="button"
