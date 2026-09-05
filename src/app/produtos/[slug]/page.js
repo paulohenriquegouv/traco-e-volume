@@ -11,6 +11,37 @@ async function getProduct(slug) {
   } catch { return null; }
 }
 
+/**
+ * Dados estruturados do produto.
+ *
+ * É o que permite o resultado da busca sair com preço e disponibilidade, em vez
+ * de só título e descrição — e é o que liga cada produto à loja pela marca.
+ */
+function dadosDoProduto(product, site) {
+  const imagens = (product.images || []).map((i) => (i.startsWith('http') ? i : site + i));
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.short_description || product.description?.slice(0, 300) || '',
+    image: imagens.length ? imagens : undefined,
+    sku: String(product.id),
+    category: product.category || undefined,
+    material: product.material || undefined,
+    brand: { '@type': 'Brand', name: 'Traço & Volume' },
+    offers: {
+      '@type': 'Offer',
+      url: `${site}/produtos/${product.slug}`,
+      price: Number(product.price).toFixed(2),
+      priceCurrency: 'BRL',
+      availability: product.stock > 0
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      seller: { '@type': 'Organization', name: 'Traço & Volume' },
+    },
+  };
+}
+
 export async function generateMetadata({ params }) {
   const product = await getProduct(params.slug);
   if (!product) return { title: 'Produto não encontrado - Traço & Volume' };
