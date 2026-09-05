@@ -96,7 +96,9 @@ body {
 button,
 .btn,
 a.btn {
-  transition: transform 90ms ease, filter 90ms ease, box-shadow 90ms ease;
+  transition: transform 150ms cubic-bezier(0.2, 0.8, 0.3, 1),
+              box-shadow 150ms cubic-bezier(0.2, 0.8, 0.3, 1),
+              filter 90ms ease;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation; /* remove o atraso de 300ms do toque em celular */
 }
@@ -109,13 +111,82 @@ a.btn:active {
   filter: brightness(0.9);
 }
 
-/* Botões de ação ganham relevo, o que torna o "afundar" perceptível */
+/* --------------------------------------------------------------------------
+   Botão flutuante
+
+   A sombra antes era dura (0 2px 0), que cola o botão na superfície como uma
+   tecla. Aqui ele passa a pairar: duas camadas de sombra — uma curta e densa
+   que define a borda, outra longa e difusa que é a sombra projetada no fundo.
+   É a distância entre as duas que o olho lê como altura. Intensidade escolhida
+   pelo Paulo em 05/09/2026 comparando as três lado a lado: a mais dramática.
+
+   A cor da sombra vem do próprio botão (--sombra), não do preto. Sombra preta
+   sobre botão colorido acinzenta o fundo; tingida, ela parece luz de verdade.
+   -------------------------------------------------------------------------- */
+
 .btn-3d {
-  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.12);
+  --sombra: 15, 23, 42; /* slate-900: padrão para botões claros */
+  box-shadow:
+    0 2px 4px rgba(var(--sombra), 0.16),
+    0 10px 22px -4px rgba(var(--sombra), 0.38);
 }
+
+/* Cada variante projeta a sombra na sua própria cor.
+   Os seletores por classe de fundo pegam os botões escritos direto em
+   Tailwind — que hoje são todos os do app — sem precisar tocar em cada um. */
+.btn-3d.bg-primary-600,
+.btn-3d.bg-primary-700,
+.btn-3d-primario { --sombra: 79, 70, 229; }  /* indigo-600 */
+.btn-3d.bg-gray-900 { --sombra: 17, 24, 39; }
+.btn-3d.bg-red-600  { --sombra: 220, 38, 38; }
+.btn-3d.bg-green-600 { --sombra: 22, 163, 74; }
+.btn-3d.bg-accent-500 { --sombra: 249, 115, 22; }
+
+/* Botão translúcido sobre fundo escuro (o WhatsApp do hero).
+   Sombra escura sobre fundo escuro não aparece — o que dá o destacamento
+   aqui é a luz na borda de cima, como se viesse de cima da tela. */
+.btn-3d-vidro {
+  backdrop-filter: blur(6px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 26px -4px rgba(0, 0, 0, 0.5);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-3d-vidro:not(:disabled):hover {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      0 20px 44px -6px rgba(0, 0, 0, 0.6);
+  }
+}
+.btn-3d-vidro:not(:disabled):active {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.btn-3d-accent   { --sombra: 249, 115, 22; } /* laranja */
+.btn-3d-escuro   { --sombra: 17, 24, 39; }
+.btn-3d-perigo   { --sombra: 220, 38, 38; }
+
+/* Sobe ao passar o mouse — só onde existe mouse. Em touch o :hover gruda
+   depois do toque e o botão fica preso no estado levantado. */
+@media (hover: hover) and (pointer: fine) {
+  .btn-3d:not(:disabled):hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 4px 8px rgba(var(--sombra), 0.18),
+      0 20px 40px -6px rgba(var(--sombra), 0.48);
+  }
+}
+
+/* Pressionado: pousa no fundo e a sombra some junto */
 .btn-3d:not(:disabled):active {
-  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.1);
-  transform: translateY(2px) scale(0.99);
+  transform: translateY(1px) scale(0.985);
+  box-shadow: 0 2px 5px rgba(var(--sombra), 0.26);
+}
+
+/* Inativo não flutua: sombra sugere que dá para clicar */
+.btn-3d:disabled {
+  box-shadow: 0 1px 2px rgba(var(--sombra), 0.10);
 }
 
 /* Processando: cursor de espera e o botão claramente inativo */
@@ -169,6 +240,9 @@ a:focus-visible {
   button, .btn, a.btn { transition: none; }
   button:not(:disabled):active,
   .btn:not(:disabled):active { transform: none; filter: brightness(0.9); }
+  /* A sombra fica (é informação: diz que dá para clicar); o movimento sai */
+  .btn-3d:not(:disabled):hover,
+  .btn-3d:not(:disabled):active { transform: none; }
   .spinner { animation-duration: 1.5s; }
   .barra-progresso { animation: none; opacity: 0.8; }
 }
