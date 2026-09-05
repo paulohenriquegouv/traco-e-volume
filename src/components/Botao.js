@@ -61,7 +61,7 @@ export default function Botao({
       onClick={aoClicar}
       disabled={inativo}
       aria-busy={carregando || undefined}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium disabled:opacity-75 ${VARIANTES[variante] || VARIANTES.primario} ${TAMANHOS[tamanho] || TAMANHOS.medio} ${relevo ? `btn-3d btn-3d-${VARIANTES[variante] ? variante : 'primario'}` : ''} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium disabled:opacity-75 ${VARIANTES[variante] || VARIANTES.primario} ${TAMANHOS[tamanho] || TAMANHOS.medio} ${relevo ? 'btn-3d' : ''} ${className}`}
       {...resto}
     >
       {carregando && <span className="spinner" aria-hidden="true" />}
