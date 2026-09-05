@@ -64,5 +64,15 @@ export default async function ProdutoDetalhePage({ params }) {
     );
   }
 
-  return <ProductDetailClient product={product} />;
+  const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://tracoevolume.com.br';
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(dadosDoProduto(product, site)) }}
+      />
+      <ProductDetailClient product={product} />
+    </>
+  );
 }
