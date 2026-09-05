@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import NavegacaoRapida from '@/components/NavegacaoRapida';
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://tracoevolume.com.br'),
   title: 'Traço & Volume — Impressão 3D',
   description: 'Produtos exclusivos em impressão 3D. Peças personalizadas com qualidade e precisão.',
   openGraph: {
