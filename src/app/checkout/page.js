@@ -87,6 +87,19 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Checkout em duas etapas. Antes era tudo numa tela so, e no celular o resumo
+  // do pedido -- que fica numa coluna ao lado no computador -- caia DEPOIS do
+  // bloco de pagamento: a pessoa escolhia como pagar antes de ver quanto era.
+  // Agora o total fecha a primeira etapa, e a segunda so trata de pagar.
+  const [etapa, setEtapa] = useState('dados');
+
+  const irPara = (nova) => {
+    setEtapa(nova);
+    setError('');
+    // Trocar de etapa sem subir deixaria a pessoa no meio da tela nova.
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // O admin pode ter desligado a forma que estava escolhida (ou o Pix, que e o
   // inicial): cair na primeira ativa evita um checkout sem nenhuma opcao marcada.
   const idsAtivos = METHODS.map(m => m.id).join(',');
@@ -262,10 +275,36 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
         <Link href="/carrinho" className="hover:text-primary-600">Carrinho</Link><span className="mx-2">/</span>
         <span className="text-gray-600">Checkout</span>
       </div>
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8">Finalizar Pedido</h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">Finalizar Pedido</h1>
+
+      {/* Duas etapas, ditas em voz alta: quem chega aqui precisa saber que ainda
+          vai ver o total antes de escolher como paga. */}
+      <ol className="flex items-center gap-3 text-sm mb-6">
+        <li className={etapa === 'dados' ? 'font-medium text-primary-700' : 'text-gray-400'}>
+          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 text-xs ${etapa === 'dados' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-500'}`}>1</span>
+          Dados e entrega
+        </li>
+        <li className="text-gray-300" aria-hidden>—</li>
+        <li className={etapa === 'pagamento' ? 'font-medium text-primary-700' : 'text-gray-400'}>
+          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 text-xs ${etapa === 'pagamento' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-500'}`}>2</span>
+          Pagamento
+        </li>
+      </ol>
+
+      {/* Quem ja tem conta nao redigita endereco: entrar traz tudo preenchido.
+          Continua dando para comprar sem cadastro -- exigir conta para vender e
+          um pedagio que so afasta quem esta com o produto escolhido. */}
+      {etapa === 'dados' && !cliente && (
+        <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-6 text-sm text-primary-900">
+          Já tem conta na loja?{' '}
+          <Link href="/entrar" className="font-medium underline hover:text-primary-700">Entre aqui</Link>{' '}
+          e seus dados e endereços vêm preenchidos. Ou siga preenchendo abaixo, sem cadastro.
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         <div className="lg:col-span-3 space-y-6">
         <form id="form-checkout" onSubmit={handleSubmit} className="space-y-6">
+          {etapa === 'dados' && (<>
           <div className="bg-white rounded-xl border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-4">Dados Pessoais</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -429,6 +468,48 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
             )}
           </div>
 
+          {/* O total no fim da primeira etapa: no celular a coluna do resumo so
+              aparece la embaixo, e sem isto a pessoa avancaria para o pagamento
+              sem nunca ter visto a soma. */}
+          <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>Subtotal</span>
+              <span className="font-medium text-gray-900">{dinheiro(subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
+              <span>Frete{escolhida ? ` (${escolhida.nome})` : ''}</span>
+              <span className="font-medium text-gray-900">
+                {!escolhida
+                  ? <span className="text-gray-400 font-normal">informe o CEP</span>
+                  : valorFrete > 0 ? dinheiro(valorFrete) : <span className="text-green-600">Grátis</span>}
+              </span>
+            </div>
+            <hr className="border-gray-100 my-3" />
+            <div className="flex items-center justify-between font-bold text-lg">
+              <span>Total</span>
+              <span>{dinheiro(totalComFrete)}</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => irPara('pagamento')}
+              disabled={!dadosPessoaisOk || !entregaOk}
+              className="btn-3d w-full mt-5 bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Ir para o pagamento
+            </button>
+
+            {(!dadosPessoaisOk || !entregaOk) && (
+              <p className="text-sm text-amber-700 mt-3">
+                {!dadosPessoaisOk
+                  ? 'Preencha nome e e-mail para continuar.'
+                  : 'Escolha como quer receber o pedido para continuar.'}
+              </p>
+            )}
+          </div>
+          </>)}
+
+          {etapa === 'pagamento' && (
           <div className="bg-white rounded-xl border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-4">Forma de Pagamento</h3>
             <div className="space-y-3">
@@ -440,6 +521,7 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
               ))}
             </div>
           </div>
+          )}
         </form>
 
         {/*
@@ -448,6 +530,7 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
           HTML — o navegador descarta o interno e o brick falha ao inicializar. O botão
           continua enviando o formulário pelo atributo form="form-checkout".
         */}
+        {etapa === 'pagamento' && (
         <div className="space-y-6">
           {method === 'boleto' && (
             <div className="bg-blue-50 text-blue-700 p-4 rounded-lg text-sm">
@@ -497,7 +580,13 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
                 : 'Finalizar Pedido'}
             </button>
           )}
+
+          <button type="button" onClick={() => irPara('dados')}
+            className="btn w-full text-sm text-gray-500 hover:text-gray-800 underline py-2">
+            Voltar e revisar os dados
+          </button>
         </div>
+        )}
         </div>
         <aside className="lg:col-span-2">
           <div className="bg-white rounded-xl border border-gray-100 p-6 sticky top-24">

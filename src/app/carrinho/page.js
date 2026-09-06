@@ -80,17 +80,24 @@ export default function CartPage() {
             </div>
             <div className="flex justify-between text-gray-600">
               <span>Frete</span>
-              <span className="text-gray-400">Calcular no checkout</span>
+              <span className="text-gray-400">na próxima etapa</span>
             </div>
             <hr className="border-gray-100" />
+            {/* "Subtotal", nao "Total": o frete ainda entra, e chamar de total o
+                que vai mudar e prometer um preco que a proxima tela desmente. */}
             <div className="flex justify-between text-base font-bold text-gray-900">
-              <span>Total</span>
+              <span>Subtotal</span>
               <span>{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
             </div>
           </div>
-          <Link href="/checkout" className="mt-6 block w-full text-center bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition-colors">
-            Finalizar Pedido
+          {/* "Continuar", nao "Finalizar": a proxima tela ainda e de dados e
+              entrega, e o pagamento so vem depois do total aparecer. */}
+          <Link href="/checkout" className="btn-3d mt-6 block w-full text-center bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition-colors">
+            Continuar para entrega
           </Link>
+          <p className="mt-2 text-xs text-gray-400 text-center">
+            Você verá o frete e o total antes de escolher como pagar.
+          </p>
           <button onClick={clearCart} className="mt-3 block w-full text-center text-gray-400 hover:text-red-500 text-sm py-2">
             Limpar Carrinho
           </button>
