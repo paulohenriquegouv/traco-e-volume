@@ -11,6 +11,7 @@
     "init-db": "node scripts/init-db.js",
     "teste-webhook": "node scripts/teste-webhook.js",
     "teste-frete": "node scripts/teste-frete.js",
+    "teste-config": "node scripts/teste-config.js",
     "verifica-webhook": "node scripts/verifica-webhook.js",
     "backup": "node scripts/backup-banco.js",
     "restaurar": "node scripts/restaurar-banco.js",

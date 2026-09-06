@@ -1,5 +1,6 @@
 import './globals.css';
 import { CartProvider } from '@/components/CartContext';
+import { ConfigLojaProvider } from '@/components/ConfigLoja';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import NavegacaoRapida from '@/components/NavegacaoRapida';
@@ -52,12 +53,14 @@ export default function RootLayout({ children }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(dadosDaMarca(site)) }}
         />
-        <CartProvider>
-          <Header />
-          <NavegacaoRapida />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </CartProvider>
+        <ConfigLojaProvider>
+          <CartProvider>
+            <Header />
+            <NavegacaoRapida />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </CartProvider>
+        </ConfigLojaProvider>
       </body>
     </html>
   );

@@ -1,23 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useCart } from './CartContext';
 import { LogoMarca } from './Logo';
+import { useConfigLoja } from './ConfigLoja';
 
 export default function Header() {
   const { count, loaded } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [cliente, setCliente] = useState(null);
-
-  // Descobre a sessão no cliente: o header é o mesmo componente em toda página,
-  // e uma consulta leve evita transformar tudo em renderização de servidor.
-  useEffect(() => {
-    fetch('/api/conta')
-      .then(r => r.json())
-      .then(d => setCliente(d.autenticado ? d.cliente : null))
-      .catch(() => setCliente(null));
-  }, []);
+  // Sessão e parâmetros vêm do mesmo lugar: o cabeçalho é o mesmo componente em
+  // toda página, e uma consulta só evita transformar tudo em renderização de
+  // servidor — ou em duas idas à rede por navegação.
+  const { config, admin, cliente } = useConfigLoja();
 
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
@@ -27,7 +22,7 @@ export default function Header() {
           <Link href="/" className="flex items-center gap-2">
             <LogoMarca className="h-11 md:h-14 w-auto shrink-0" />
             <div>
-              <span className="text-lg font-bold text-gray-900">Traço & Volume</span>
+              <span className="text-lg font-bold text-gray-900">{config.loja.nome}</span>
               <span className="hidden sm:inline text-xs text-gray-400 ml-1">impressão 3D</span>
             </div>
           </Link>
@@ -48,9 +43,18 @@ export default function Header() {
             >
               Instagram
             </a>
+            {/* Atalho do painel: aparece so para quem esta com sessao de
+                administrador aberta e some para todo o resto. Evita ter que
+                digitar /admin na barra para conferir um pedido pelo celular. */}
+            {admin && (
+              <Link href="/admin/dashboard"
+                className="btn text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 px-3 py-1.5 rounded-lg transition-colors">
+                Painel
+              </Link>
+            )}
             {cliente ? (
               <Link href="/minha-conta" className="btn text-sm font-medium text-gray-600 hover:text-primary-600 transition-colors">
-                {cliente.nome.split(' ')[0]}
+                {(cliente.nome || '').split(' ')[0]}
               </Link>
             ) : (
               <Link href="/entrar" className="btn text-sm font-medium text-gray-600 hover:text-primary-600 transition-colors">
@@ -108,6 +112,11 @@ export default function Header() {
             <Link href="/pedido" className="block text-sm font-medium text-gray-600 hover:text-primary-600" onClick={() => setMenuOpen(false)}>
               Meu Pedido
             </Link>
+            {admin && (
+              <Link href="/admin/dashboard" className="block text-sm font-medium text-primary-700" onClick={() => setMenuOpen(false)}>
+                Painel do administrador
+              </Link>
+            )}
           </div>
         </div>
       )}

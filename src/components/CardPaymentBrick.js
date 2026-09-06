@@ -41,7 +41,7 @@ function carregarSdk() {
   });
 }
 
-export default function CardPaymentBrick({ amount, email, onPagar }) {
+export default function CardPaymentBrick({ amount, parcelas = 12, email, onPagar }) {
   const [erro, setErro] = useState('');
   const [pronto, setPronto] = useState(false);
 
@@ -60,6 +60,8 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
   amountRef.current = amount;
   const emailRef = useRef(email);
   emailRef.current = email;
+  const parcelasRef = useRef(parcelas);
+  parcelasRef.current = parcelas;
 
   useEffect(() => {
     let vivo = true;
@@ -114,7 +116,7 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
             ...(emailRef.current ? { payer: { email: emailRef.current } } : {}),
           },
           customization: {
-            paymentMethods: { maxInstallments: 12 },
+            paymentMethods: { maxInstallments: Math.min(12, Math.max(1, Number(parcelasRef.current) || 12)) },
           },
           callbacks: {
             onReady: () => { if (vivo) setPronto(true); },

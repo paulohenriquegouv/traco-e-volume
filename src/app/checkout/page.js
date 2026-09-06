@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCart } from '@/components/CartContext';
+import { useConfigLoja } from '@/components/ConfigLoja';
+import { metodosAtivos, parcelasPara } from '@/lib/config-loja';
 
 // O brick monta iframes do Mercado Pago: só faz sentido no navegador
 const CardPaymentBrick = dynamic(() => import('@/components/CardPaymentBrick'), {
@@ -28,15 +30,13 @@ const MOTIVO_RECUSA = {
 
 const dinheiro = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-const METHODS = [
-  { id: 'pix', label: 'Pix', desc: 'Pagamento instantâneo via QR Code.' },
-  { id: 'card', label: 'Cartão de Crédito', desc: 'Parcele em até 12x.' },
-  { id: 'boleto', label: 'Boleto Bancário', desc: 'Vence em 3 dias úteis.' },
-];
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, clearCart } = useCart();
+  // Formas de pagamento e limite de parcelas saem de /admin/configuracoes.
+  const { config } = useConfigLoja();
+  const METHODS = metodosAtivos(config.pagamento);
   const [f, setF] = useState({ name: '', email: '', phone: '', document: '', address: '', number: '', complement: '', neighborhood: '', city: '', state: '', zip: '' });
   const [cepStatus, setCepStatus] = useState('');
   const campoNumero = useRef(null);
@@ -86,6 +86,14 @@ export default function CheckoutPage() {
   const [method, setMethod] = useState('pix');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // O admin pode ter desligado a forma que estava escolhida (ou o Pix, que e o
+  // inicial): cair na primeira ativa evita um checkout sem nenhuma opcao marcada.
+  const idsAtivos = METHODS.map(m => m.id).join(',');
+  useEffect(() => {
+    const ids = idsAtivos.split(',');
+    if (!ids.includes(method)) setMethod(ids[0]);
+  }, [idsAtivos, method]);
 
   // ---------- entrega ----------
   const [entrega, setEntrega] = useState(null);   // resposta do /api/frete
@@ -468,7 +476,7 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
                   Escolha como quer receber o pedido acima — o parcelamento é calculado com o frete incluído.
                 </div>
               ) : (
-                <CardPaymentBrick key={totalComFrete} amount={totalComFrete} email={f.email} onPagar={handleCartao} />
+                <CardPaymentBrick key={totalComFrete} amount={totalComFrete} parcelas={parcelasPara(totalComFrete, config.pagamento)} email={f.email} onPagar={handleCartao} />
               )}
             </div>
           )}
