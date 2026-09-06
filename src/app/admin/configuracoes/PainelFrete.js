@@ -206,8 +206,8 @@ export default function PainelFrete() {
 
           <div className="space-y-3">
             {(config.embalagens || []).map((e, i) => (
-              <div key={i} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-start">
-                <div className="col-span-2 md:col-span-4">
+              <div key={i} className="grid grid-cols-3 md:grid-cols-12 gap-2 items-start border-b border-gray-50 pb-3 md:border-0 md:pb-0">
+                <div className="col-span-3 md:col-span-4">
                   <input type="text" value={e.nome} placeholder="Nome (ex: Caixa média)"
                     onChange={ev => mudarEmbalagem(i, 'nome', ev.target.value)} className={ic} />
                   {i === 0 && <p className="text-xs text-gray-400 mt-1">Nome</p>}

@@ -36,7 +36,7 @@ export default async function AdminPedidosPage({ searchParams }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Pedidos</h1>
       </div>
 
@@ -56,21 +56,21 @@ export default async function AdminPedidosPage({ searchParams }) {
                 <th className="p-4 font-medium">Pedido</th>
                 <th className="p-4 font-medium">Cliente</th>
                 <th className="p-4 font-medium">Valor</th>
-                <th className="p-4 font-medium">Pagamento</th>
+                <th className="p-4 font-medium hidden md:table-cell">Pagamento</th>
                 <th className="p-4 font-medium">Status</th>
-                <th className="p-4 font-medium">Data</th>
+                <th className="p-4 font-medium hidden sm:table-cell">Data</th>
               </tr></thead>
               <tbody>
                 {filtered.map(o => (
                   <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="p-4"><Link href={`/admin/pedidos/${o.id}`} className="text-primary-600 hover:text-primary-700 font-medium">#{o.order_id}</Link></td>
-                    <td className="p-4 text-gray-700">{o.customer_name}</td>
+                    <td className="p-4 text-gray-700 max-w-[10rem] truncate">{o.customer_name}</td>
                     <td className="p-4 font-medium">{Number(o.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                    <td className="p-4 text-gray-600 capitalize">{o.payment_method}</td>
+                    <td className="p-4 text-gray-600 capitalize hidden md:table-cell">{o.payment_method}</td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[o.status] || 'bg-gray-100 text-gray-600'}`}>{statusLabels[o.status] || o.status}</span>
                     </td>
-                    <td className="p-4 text-gray-500">{new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-4 text-gray-500 hidden sm:table-cell">{new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
                   </tr>
                 ))}
               </tbody>

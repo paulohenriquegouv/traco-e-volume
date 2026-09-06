@@ -27,13 +27,13 @@ export default async function AdminProdutosPage({ searchParams }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Produtos</h1>
         <Link href="/admin/produtos/novo" className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Novo Produto</Link>
       </div>
 
       {/* Busca — form GET simples, funciona sem JavaScript */}
-      <form method="get" action="/admin/produtos" className="mb-6 flex items-center gap-3">
+      <form method="get" action="/admin/produtos" className="mb-6 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
@@ -64,14 +64,18 @@ export default async function AdminProdutosPage({ searchParams }) {
 
       {products.length > 0 ? (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          {/* No celular sobram as colunas que decidem alguma coisa: nome, preco,
+              situacao e o link de editar. O resto reaparece conforme a tela cresce,
+              em vez de virar uma tabela de sete colunas espremida em 360px. */}
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left text-gray-500">
                 <th className="p-4 font-medium">Produto</th>
                 <th className="p-4 font-medium">Preço</th>
-                <th className="p-4 font-medium">Categoria</th>
-                <th className="p-4 font-medium">Estoque</th>
-                <th className="p-4 font-medium">Destaque</th>
+                <th className="p-4 font-medium hidden md:table-cell">Categoria</th>
+                <th className="p-4 font-medium hidden sm:table-cell">Estoque</th>
+                <th className="p-4 font-medium hidden lg:table-cell">Destaque</th>
                 <th className="p-4 font-medium">Ativo</th>
                 <th className="p-4 font-medium text-right">Ações</th>
               </tr>
@@ -91,9 +95,9 @@ export default async function AdminProdutosPage({ searchParams }) {
                     </div>
                   </td>
                   <td className="p-4 font-medium">{Number(p.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                  <td className="p-4 text-gray-600 capitalize">{p.category || '—'}</td>
-                  <td className="p-4">{p.stock}</td>
-                  <td className="p-4">{p.featured ? '⭐ Sim' : '—'}</td>
+                  <td className="p-4 text-gray-600 capitalize hidden md:table-cell">{p.category || '—'}</td>
+                  <td className="p-4 hidden sm:table-cell">{p.stock}</td>
+                  <td className="p-4 hidden lg:table-cell">{p.featured ? '⭐ Sim' : '—'}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {p.active ? 'Ativo' : 'Inativo'}
@@ -106,6 +110,7 @@ export default async function AdminProdutosPage({ searchParams }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ) : busca ? (
         <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
