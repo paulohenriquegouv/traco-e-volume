@@ -453,12 +453,22 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
               <p className="text-sm text-gray-500 mb-4">
                 Formulário seguro do Mercado Pago — os dados do cartão não passam pela nossa loja.
               </p>
-              {dadosPessoaisOk ? (
-                <CardPaymentBrick amount={totalComFrete} email={f.email} onPagar={handleCartao} />
-              ) : (
+              {/* A entrega vem antes do cartão de propósito: o brick calcula as
+                  parcelas com o valor que recebe ao ser criado e não relê depois.
+                  Montá-lo antes do frete estar escolhido mostraria "12x de" um
+                  total que ainda vai mudar. A key faz o brick renascer se o valor
+                  mudar mesmo assim (trocar de entrega para retirada no fim) —
+                  apaga o cartão digitado, mas é melhor que parcelar pelo valor errado. */}
+              {!dadosPessoaisOk ? (
                 <div className="bg-amber-50 text-amber-700 p-4 rounded-lg text-sm">
                   Preencha nome e e-mail acima para liberar o pagamento com cartão.
                 </div>
+              ) : !entregaOk ? (
+                <div className="bg-amber-50 text-amber-700 p-4 rounded-lg text-sm">
+                  Escolha como quer receber o pedido acima — o parcelamento é calculado com o frete incluído.
+                </div>
+              ) : (
+                <CardPaymentBrick key={totalComFrete} amount={totalComFrete} email={f.email} onPagar={handleCartao} />
               )}
             </div>
           )}

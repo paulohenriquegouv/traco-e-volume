@@ -51,7 +51,9 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
   const containerId = 'brick-cartao-' + useId().replace(/:/g, '');
 
   // O brick é criado uma vez só; estes refs entregam os valores do momento da
-  // criação e do envio, sem obrigar o efeito a rodar de novo.
+  // criação e do envio, sem obrigar o efeito a rodar de novo. Vale para o callback,
+  // que muda a cada render — e NÃO dispensa remontar quando o valor muda, porque o
+  // brick já terá lido o amount (ver o comentário no fim do efeito).
   const onPagarRef = useRef(onPagar);
   onPagarRef.current = onPagar;
   const amountRef = useRef(amount);
@@ -161,8 +163,12 @@ export default function CardPaymentBrick({ amount, email, onPagar }) {
       vivo = false;
       try { controller?.unmount?.(); } catch {}
     };
-    // Criado uma única vez: o valor e o e-mail vêm dos refs. O carrinho não muda
-    // enquanto o checkout está aberto.
+    // Criado uma única vez por montagem. O Mercado Pago lê `initialization.amount`
+    // ao criar o brick e nunca mais: mudar o valor depois não reflete nas parcelas
+    // que o cliente vê. Recriar no MESMO container resolve sem desenhar nada (é o
+    // que o comentário do containerId conta), então a remontagem tem que vir de
+    // fora — quem usa este componente passa `key={valor}` para trocar de instância
+    // quando o total mudar. Ver o bloco do cartão em src/app/checkout/page.js.
   }, [containerId]);
 
   // O container precisa ser SEMPRE o primeiro filho, sem irmao condicional antes
