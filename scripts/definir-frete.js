@@ -10,10 +10,9 @@
  * A tela continua sendo a dona: qualquer coisa alterada por ela depois vale mais
  * que este arquivo, que não roda sozinho nunca.
  *
- * ATENÇÃO: os preços abaixo são ESTIMATIVA DE PARTIDA, não cotação. Foram postos
- * para a loja sair do frete zero com uma ordem de grandeza plausível para quem
- * posta de Belém. Cada um precisa ser conferido contra uma cotação real — o
- * roteiro está no fim deste arquivo.
+ * Os preços nascem ZERADOS aqui de propósito, pelo mesmo motivo que nascem
+ * zerados no resto do sistema: ninguém é cobrado por um valor que não veio de
+ * uma cotação. O roteiro para levantá-los está junto da tabela, abaixo.
  */
 const fs = require('fs');
 const path = require('path');
@@ -32,21 +31,28 @@ const EMBALAGENS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Preço por região, saindo de Belém (PA).
+// Preço por região, saindo de Belém (PA) — CEP 66050-585.
 //
-// Norte é a própria região, e ainda assim não é barato: distância dentro do
-// Norte é grande e boa parte do trajeto não é rodoviária. Do Pará, todo o resto
-// do país é "longe" — por isso a diferença entre as faixas é menor do que seria
-// numa loja do Sudeste.
+// ZERADO ATÉ A COTAÇÃO CHEGAR. Nenhuma tabela pública dá o preço por rota, e o
+// número que se vê publicado (R$ 10 a R$ 12 por quilo) é de rota do Sudeste:
+// aplicá-lo a quem posta do Norte erraria para MENOS, e a diferença sairia do
+// bolso da loja em toda venda. Enquanto está zerado, a loja cobra frete zero,
+// como cobrava antes.
 //
-// ESTIMATIVA. Confira antes de divulgar a loja.
+// Para preencher: cotar o PAC de 66050-585 com a caixa média (27x18x9) para
+// 66815-000 (Belém) e 01310-100 (São Paulo), em 0,5 kg e 2 kg. Com os quatro
+// valores saem a base e o preço por quilo do Norte e do Sudeste; as outras três
+// regiões se escalonam entre eles.
+//
+//   base     = preço de 0,5 kg (pedido até o peso base)
+//   kg_extra = (preço de 2 kg menos o preço de 0,5 kg) dividido por 2
 // ---------------------------------------------------------------------------
 const REGIOES = {
-  norte:        { base: 25, kg_extra: 6,  prazo_dias: 6 },
-  nordeste:     { base: 32, kg_extra: 8,  prazo_dias: 9 },
-  centro_oeste: { base: 36, kg_extra: 9,  prazo_dias: 10 },
-  sudeste:      { base: 38, kg_extra: 10, prazo_dias: 10 },
-  sul:          { base: 42, kg_extra: 11, prazo_dias: 12 },
+  norte:        { base: 0, kg_extra: 0, prazo_dias: 0 },
+  nordeste:     { base: 0, kg_extra: 0, prazo_dias: 0 },
+  centro_oeste: { base: 0, kg_extra: 0, prazo_dias: 0 },
+  sudeste:      { base: 0, kg_extra: 0, prazo_dias: 0 },
+  sul:          { base: 0, kg_extra: 0, prazo_dias: 0 },
 };
 
 const OUTROS = {
@@ -126,7 +132,10 @@ async function main() {
 
   console.log(`\nCubagem: 1 kg a cada ${config.divisor_cubagem} cm³ (0 = desligada)`);
   console.log(`Peso base: ${config.peso_base_g} g   |   Peso padrão: ${config.peso_padrao_g} g`);
-  console.log('\nOs preços acima são ESTIMATIVA, não cotação. Confira em /admin/configuracoes → Entrega.');
+  const zerado = Object.values(config.regioes).every(r => r.base === 0 && r.kg_extra === 0);
+  console.log(zerado
+    ? '\nTabela ZERADA: a loja segue cobrando frete zero. Preencha os valores em REGIOES (scripts/definir-frete.js) ou em /admin/configuracoes.'
+    : '\nConfira os valores em /admin/configuracoes antes de divulgar a loja.');
 
   await conn.end();
 }

@@ -20,6 +20,7 @@
     "testar-email": "node scripts/testar-email.js",
     "migrar-tokens": "node scripts/migrar-tokens.js",
     "migrar-dimensoes": "node scripts/migrar-dimensoes.js",
+    "definir-frete": "node scripts/definir-frete.js",
     "migrar-frete": "node scripts/migrar-frete.js",
     "testar-email-prod": "node scripts/testar-email-prod.js",
     "reenviar-verificacao": "node scripts/reenviar-verificacao.js"
