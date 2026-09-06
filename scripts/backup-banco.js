@@ -12,7 +12,23 @@ const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
 
-const TABELAS = ['admin_users', 'products', 'orders', 'order_items', 'settings'];
+// As contas de cliente nasceram numa migração separada (migrar-contas.js) e
+// ficaram de fora desta lista: o backup vinha saindo sem nenhum cliente
+// cadastrado, o que é pior que não ter backup — parece que existe.
+//
+// customer_tokens fica de fora de propósito: são tokens de sessão e de
+// verificação, que expiram sozinhos. Restaurar sem eles só pede que as pessoas
+// entrem de novo, e evita guardar material de acesso num .sql. Depois de
+// restaurar, `npm run migrar-tokens` recria a tabela vazia.
+const TABELAS = [
+  'admin_users',
+  'customers',
+  'customer_addresses',
+  'products',
+  'orders',
+  'order_items',
+  'settings',
+];
 
 function lerEnv() {
   const p = path.join(__dirname, '..', '.env.local');
