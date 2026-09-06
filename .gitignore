@@ -13,6 +13,7 @@ out/
 # IDE
 .idea/
 .vscode/
+.claude/settings.local.json
 *.swp
 *.swo
 
@@ -22,10 +23,6 @@ Thumbs.db
 
 # Data
 data/
-
-# Documentation (generated)
-# Documentacao_*.docx
-# scripts/gerar-documentacao.js
 
 # Uploads
 public/uploads/*
