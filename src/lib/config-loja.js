@@ -19,8 +19,6 @@ const PADRAO = {
     nome: 'Traço & Volume',
     email: '',
     whatsapp: '',
-    // Aparece no checkout quando o cliente escolhe retirar. Vazio esconde a linha.
-    endereco_retirada: '',
     cidade_origem: '',
     uf_origem: '',
   },

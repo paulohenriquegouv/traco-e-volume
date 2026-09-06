@@ -24,8 +24,6 @@ const BLOCOS = {
       { campo: 'nome', rotulo: 'Nome da loja', ajuda: 'Aparece no site, nos e-mails e no pedido.' },
       { campo: 'email', rotulo: 'E-mail de contato', tipo: 'email' },
       { campo: 'whatsapp', rotulo: 'WhatsApp', ajuda: 'Link completo (https://wa.me/55...) ou só os números.' },
-      { campo: 'endereco_retirada', rotulo: 'Endereço de retirada', tipo: 'textarea',
-        ajuda: 'Mostrado no checkout quando o cliente escolhe retirar. Em branco, não aparece.' },
       { campo: 'cidade_origem', rotulo: 'Cidade de onde você posta', largura: 'metade',
         ajuda: 'Guardado para quando entrar a cotação automática. Hoje não entra no cálculo.' },
       { campo: 'uf_origem', rotulo: 'UF', largura: 'metade' },

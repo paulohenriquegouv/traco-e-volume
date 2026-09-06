@@ -39,7 +39,7 @@ teste('o que foi preenchido manda', () => {
   igual(c.nome, 'Outra Loja');
   igual(c.email, 'a@b.com');
   // o que não foi tocado continua no padrão
-  igual(c.endereco_retirada, '');
+  igual(c.cidade_origem, '');
 });
 
 teste('bloco desconhecido não vira configuração', () => {
