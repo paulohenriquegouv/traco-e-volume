@@ -32,7 +32,6 @@ const PADRAO = {
     botao_produtos: 'Ver Produtos',
     botao_contato: 'Fale Conosco',
     titulo_categorias: 'Categorias',
-    titulo_destaques: 'Produtos em Destaque',
   },
   pagamento: {
     pix_ativo: true,

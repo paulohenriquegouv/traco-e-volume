@@ -40,7 +40,6 @@ const BLOCOS = {
       { campo: 'botao_produtos', rotulo: 'Botão principal', largura: 'metade' },
       { campo: 'botao_contato', rotulo: 'Botão de contato', largura: 'metade' },
       { campo: 'titulo_categorias', rotulo: 'Título da seção de categorias', largura: 'metade' },
-      { campo: 'titulo_destaques', rotulo: 'Título da seção de destaques', largura: 'metade' },
     ],
   },
   pagamento: {
