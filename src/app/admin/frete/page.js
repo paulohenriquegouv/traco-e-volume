@@ -173,6 +173,40 @@ export default function AdminFretePage() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <h2 className="font-bold text-gray-900 mb-1">Cubagem</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Peça impressa em 3D é leve e volumosa: a transportadora cobra pelo espaço que a caixa
+            ocupa, não pelo que a balança marca. Com a cubagem ligada, o pedido é cobrado pelo
+            maior dos dois — peso real ou peso do volume. Só entra na conta o produto com as três
+            medidas cadastradas.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Divisor de cubagem (cm³ por kg)
+              </label>
+              <input type="number" min="0" step="1" value={config.divisor_cubagem}
+                onChange={e => setConfig(c => ({ ...c, divisor_cubagem: e.target.value }))} className={ic} />
+              <p className="text-xs text-gray-400 mt-1">
+                {Number(config.divisor_cubagem) > 0
+                  ? `Cada ${Number(config.divisor_cubagem).toLocaleString('pt-BR')} cm³ contam como 1 kg. Uma caixa de 30x25x20 pesaria ${(15000 / Number(config.divisor_cubagem)).toFixed(1).replace('.', ',')} kg.`
+                  : 'Zero desliga: o frete sai só pelo peso. 6000 é o divisor usual das encomendas.'}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cubar só acima de (cm³)
+              </label>
+              <input type="number" min="0" step="100" value={config.cubagem_minima_cm3}
+                onChange={e => setConfig(c => ({ ...c, cubagem_minima_cm3: e.target.value }))} className={ic} />
+              <p className="text-xs text-gray-400 mt-1">
+                Caixa menor que isso paga pelo peso. Zero cuba qualquer volume.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
           <h2 className="font-bold text-gray-900 mb-4">Retirada</h2>
           <label className="flex items-center gap-2 mb-4">
             <input type="checkbox" checked={config.retirada.ativa}

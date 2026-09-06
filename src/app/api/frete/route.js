@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { conferirCarrinho } from '@/lib/carrinho-servidor';
-import { lerConfig, calcularOpcoes, pesoDoPedido } from '@/lib/frete';
+import { lerConfig, calcularOpcoes, pesoParaFrete } from '@/lib/frete';
 
 /**
  * Opções de entrega para um carrinho e uma UF.
@@ -19,7 +19,7 @@ export async function POST(request) {
     if (!carrinho.ok) return NextResponse.json({ error: carrinho.erro }, { status: 400 });
 
     const config = await lerConfig(db);
-    const peso_g = pesoDoPedido(carrinho.itens, config);
+    const peso_g = pesoParaFrete(carrinho.itens, config);
 
     const resultado = calcularOpcoes({
       config,

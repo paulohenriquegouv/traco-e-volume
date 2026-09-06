@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export default function NovoProdutoPage() {
   const router = useRouter();
-  const [f, setF] = useState({ name: '', slug: '', description: '', short_description: '', price: '', compare_price: '', category: '', material: '', weight: '', dimensions: '', stock: '0', featured: false, active: true });
+  const [f, setF] = useState({ name: '', slug: '', description: '', short_description: '', price: '', compare_price: '', category: '', material: '', weight: '', length_cm: '', width_cm: '', height_cm: '', stock: '0', featured: false, active: true });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -16,7 +16,7 @@ export default function NovoProdutoPage() {
     setLoading(true);
     setError('');
     try {
-      const body = { ...f, price: parseFloat(f.price) || 0, compare_price: f.compare_price ? parseFloat(f.compare_price) : null, weight: f.weight ? parseFloat(f.weight) : null, stock: parseInt(f.stock) || 0, images };
+      const body = { ...f, price: parseFloat(f.price) || 0, compare_price: f.compare_price ? parseFloat(f.compare_price) : null, weight: f.weight ? parseFloat(f.weight) : null, length_cm: f.length_cm ? parseFloat(f.length_cm) : null, width_cm: f.width_cm ? parseFloat(f.width_cm) : null, height_cm: f.height_cm ? parseFloat(f.height_cm) : null, stock: parseInt(f.stock) || 0, images };
       const res = await fetch('/api/produtos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao criar');
@@ -114,9 +114,36 @@ export default function NovoProdutoPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Peso (g)</label>
               <input type="number" step="0.1" value={f.weight} onChange={e => setF({...f, weight: e.target.value})} className={ic} />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dimensões</label>
-              <input type="text" value={f.dimensions} onChange={e => setF({...f, dimensions: e.target.value})} className={ic} placeholder="ex: 10x5x3 cm" />
+            {/* Medidas da EMBALAGEM, nao da peca: e a caixa que a transportadora
+                mede para cobrar. Em numeros separados porque cotacao de frete nao
+                le frase -- e porque peca 3D e leve e volumosa, entao o espaco
+                ocupado costuma valer mais que o peso. */}
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dimensões da embalagem (cm)
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  ['length_cm', 'Comprimento'],
+                  ['width_cm', 'Largura'],
+                  ['height_cm', 'Altura'],
+                ].map(([campo, rotulo]) => (
+                  <div key={campo}>
+                    <input
+                      type="number" step="0.1" min="0" inputMode="decimal"
+                      value={f[campo]}
+                      onChange={e => setF({...f, [campo]: e.target.value})}
+                      className={ic}
+                      placeholder={rotulo}
+                      aria-label={rotulo + ' em centimetros'}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">{rotulo}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Usado no cálculo do frete. Sem as três medidas, o pedido é cobrado só pelo peso.
+              </p>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { numeroCm, textoParaGravar } from '@/lib/dimensoes';
 import { checkAuth } from '@/lib/auth';
 
 // GET /api/produtos/[id] — Obter produto por ID ou slug
@@ -59,7 +60,8 @@ export async function PUT(request, { params }) {
       UPDATE products SET
         name = ?, slug = ?, description = ?, short_description = ?,
         price = ?, compare_price = ?, images = ?, category = ?,
-        tags = ?, weight = ?, dimensions = ?, material = ?,
+        tags = ?, weight = ?, dimensions = ?,
+        length_cm = ?, width_cm = ?, height_cm = ?, material = ?,
         colors = ?, stock = ?, featured = ?, active = ?
       WHERE id = ?
     `).run(
@@ -73,7 +75,18 @@ export async function PUT(request, { params }) {
       data.category ?? existing.category,
       JSON.stringify(data.tags ?? JSON.parse(existing.tags || '[]')),
       data.weight ?? existing.weight,
-      data.dimensions ?? existing.dimensions,
+      // Numeros mandam no texto; sem os tres, preserva o que o cadastro tinha.
+      textoParaGravar(
+        {
+          length_cm: data.length_cm ?? existing.length_cm,
+          width_cm: data.width_cm ?? existing.width_cm,
+          height_cm: data.height_cm ?? existing.height_cm,
+        },
+        data.dimensions ?? existing.dimensions
+      ),
+      numeroCm(data.length_cm ?? existing.length_cm),
+      numeroCm(data.width_cm ?? existing.width_cm),
+      numeroCm(data.height_cm ?? existing.height_cm),
       data.material ?? existing.material,
       JSON.stringify(data.colors ?? JSON.parse(existing.colors || '[]')),
       data.stock ?? existing.stock,

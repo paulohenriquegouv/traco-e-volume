@@ -6,13 +6,15 @@
  * pagaria o preço que quisesse, e o frete grátis por valor mínimo cairia com um
  * subtotal fingido.
  *
- * O peso de cada item vem junto porque é ele que define a faixa de frete: buscar
- * preço e peso na mesma consulta evita uma segunda ida ao banco no meio do
- * checkout. O peso TOTAL do pedido não é somado aqui — quem soma é
- * `pesoDoPedido` (src/lib/frete.js), que sabe qual peso assumir para produto sem
- * peso cadastrado. Duas contas de peso em lugares diferentes acabariam
- * divergindo.
+ * O peso e o volume de cada item vêm junto porque são eles que definem a faixa de
+ * frete: buscar tudo na mesma consulta evita uma segunda ida ao banco no meio do
+ * checkout. Os totais do pedido não são somados aqui — quem soma é
+ * `pesoParaFrete` (src/lib/frete.js), que sabe qual peso assumir para produto sem
+ * peso cadastrado e quando o volume passa na frente da balança. Duas contas de
+ * peso em lugares diferentes acabariam divergindo.
  */
+
+const { volumeCm3 } = require('./dimensoes');
 
 const MAX_ITENS = 50;
 const MAX_QTD = 99;
@@ -61,7 +63,10 @@ async function conferirCarrinho(db, recebidos) {
   const ids = [...quantidades.keys()];
   const marcadores = ids.map(() => '?').join(', ');
   const produtos = await db
-    .prepare(`SELECT id, name, price, weight, active FROM products WHERE id IN (${marcadores})`)
+    .prepare(
+      `SELECT id, name, price, weight, length_cm, width_cm, height_cm, active ` +
+      `FROM products WHERE id IN (${marcadores})`
+    )
     .all(...ids);
 
   const porId = new Map((produtos || []).map(p => [Number(p.id), p]));
@@ -89,6 +94,9 @@ async function conferirCarrinho(db, recebidos) {
       quantity,
       total,
       peso_g: Number.isFinite(peso) && peso > 0 ? peso : 0,
+      // Zero em produto sem as três medidas: o frete cai para o peso, em vez de
+      // inventar uma caixa que ninguém mediu.
+      volume_cm3: volumeCm3(p),
     });
     subtotal = Math.round((subtotal + total) * 100) / 100;
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { numeroCm, textoParaGravar } from '@/lib/dimensoes';
 import { checkAuth } from '@/lib/auth';
 
 // GET /api/produtos — Listar produtos (público)
@@ -88,8 +89,8 @@ export async function POST(request) {
     }
 
     const result = await db.prepare(`
-      INSERT INTO products (name, slug, description, short_description, price, compare_price, images, category, tags, weight, dimensions, material, colors, stock, featured, active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (name, slug, description, short_description, price, compare_price, images, category, tags, weight, dimensions, length_cm, width_cm, height_cm, material, colors, stock, featured, active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.name,
       slug,
@@ -101,7 +102,12 @@ export async function POST(request) {
       data.category || '',
       JSON.stringify(data.tags || []),
       data.weight || null,
-      data.dimensions || '',
+      // O texto sai dos numeros quando eles existem: uma fonte so, para a ficha
+      // nunca dizer 15x15x20 enquanto o frete calcula outra caixa.
+      textoParaGravar(data, data.dimensions),
+      numeroCm(data.length_cm),
+      numeroCm(data.width_cm),
+      numeroCm(data.height_cm),
       data.material || '',
       JSON.stringify(data.colors || []),
       data.stock || 0,

@@ -4,7 +4,7 @@ import { getDb } from '@/lib/db';
 import { generateOrderId } from '@/lib/auth';
 import { clienteAtual } from '@/lib/customer-auth';
 import { conferirCarrinho } from '@/lib/carrinho-servidor';
-import { lerConfig, pesoDoPedido, precoDaOpcao } from '@/lib/frete';
+import { lerConfig, pesoParaFrete, precoDaOpcao } from '@/lib/frete';
 
 // CPF/CNPJ chega formatado do formulario; o MP so aceita digitos
 function onlyDigits(v) {
@@ -115,7 +115,7 @@ export async function POST(request) {
       id: opcaoFrete,
       uf: endereco.state,
       subtotal: carrinho.subtotal,
-      peso_g: pesoDoPedido(carrinho.itens, configFrete),
+      peso_g: pesoParaFrete(carrinho.itens, configFrete),
     });
     // null = opcao inexistente para este endereco (ex.: entrega sem UF). Recusar
     // e melhor que cobrar um frete que ninguem calculou.

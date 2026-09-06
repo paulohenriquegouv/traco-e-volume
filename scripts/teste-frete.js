@@ -5,7 +5,9 @@
 const {
   mesclarConfig, regiaoDaUf, pesoDoPedido, precoDaEntrega,
   calcularOpcoes, precoDaOpcao, CONFIG_PADRAO,
+  volumeDoPedido, pesoCubado, pesoParaFrete,
 } = require('../src/lib/frete');
+const { lerTexto, medidas, volumeCm3, textoParaGravar } = require('../src/lib/dimensoes');
 const { conferirCarrinho } = require('../src/lib/carrinho-servidor');
 
 let passou = 0, falhou = 0;
@@ -195,6 +197,8 @@ const CATALOGO = [
   { id: 1, name: 'Vaso', price: 50, weight: 400, active: 1 },
   { id: 2, name: 'Chaveiro', price: 10, weight: null, active: 1 },
   { id: 3, name: 'Fora de linha', price: 99, weight: 100, active: 0 },
+  // Leve e volumoso: o caso que a tabela só por peso cobra barato demais.
+  { id: 4, name: 'Vaso grande', price: 120, weight: 400, length_cm: 30, width_cm: 25, height_cm: 20, active: 1 },
 ];
 
 teste('preço vem do banco, não do que o navegador mandou', async () => {
@@ -264,6 +268,86 @@ teste('carrinho pesado do banco resulta no frete da faixa certa', async () => {
   // com o frete grátis desligado, paga base + 2 kg extras
   const semGratis = { ...TABELA, gratis_acima: 0 };
   igual(precoDaOpcao({ config: semGratis, id: 'entrega', uf: 'PA', subtotal: r.subtotal, peso_g: peso }), 20 + 10);
+});
+
+
+// ---------- dimensões e cubagem ----------
+
+teste('texto de dimensão vira números quando dá para ler', () => {
+  igual(lerTexto('15x15x20 cm'), { length_cm: 15, width_cm: 15, height_cm: 20 });
+  igual(lerTexto('10,5 x 8 x 3'), { length_cm: 10.5, width_cm: 8, height_cm: 3 });
+  igual(lerTexto('15X15X20cm'), { length_cm: 15, width_cm: 15, height_cm: 20 });
+});
+
+teste('texto que não dá para ler não vira medida inventada', () => {
+  igual(lerTexto('aprox. 10 cm'), null);
+  igual(lerTexto('15x15'), null);
+  igual(lerTexto(''), null);
+  igual(lerTexto(null), null);
+});
+
+teste('meia medida não serve para cotar', () => {
+  igual(medidas({ length_cm: 10, width_cm: 5 }), null);
+  igual(volumeCm3({ length_cm: 10, width_cm: 5 }), 0);
+  igual(volumeCm3({ length_cm: 10, width_cm: 5, height_cm: 0 }), 0);
+});
+
+teste('volume é o produto das três medidas', () => {
+  igual(volumeCm3({ length_cm: 30, width_cm: 25, height_cm: 20 }), 15000);
+});
+
+teste('o texto da ficha sai dos números', () => {
+  igual(textoParaGravar({ length_cm: 15, width_cm: 15, height_cm: 20 }, 'qualquer coisa'), '15 x 15 x 20 cm');
+});
+
+teste('sem os três números o texto antigo é preservado', () => {
+  igual(textoParaGravar({ length_cm: 15 }, 'tamanho de um A5'), 'tamanho de um A5');
+  igual(textoParaGravar({}, ''), '');
+});
+
+teste('cubagem nasce desligada e não mexe no peso', () => {
+  igual(mesclarConfig(null).divisor_cubagem, 0);
+  igual(pesoCubado(15000, TABELA), 0);
+  igual(pesoParaFrete([{ peso_g: 400, volume_cm3: 15000, quantity: 1 }], TABELA), 400);
+});
+
+teste('cubagem ligada cobra pelo espaço quando o espaço pesa mais', () => {
+  const cfg = { ...TABELA, divisor_cubagem: 6000 };
+  igual(pesoCubado(15000, cfg), 2500);
+  igual(pesoParaFrete([{ peso_g: 400, volume_cm3: 15000, quantity: 1 }], cfg), 2500);
+});
+
+teste('peça pesada e pequena continua pagando pela balança', () => {
+  const cfg = { ...TABELA, divisor_cubagem: 6000 };
+  igual(pesoParaFrete([{ peso_g: 3000, volume_cm3: 6000, quantity: 1 }], cfg), 3000);
+});
+
+teste('volume soma por quantidade', () => {
+  igual(volumeDoPedido([{ volume_cm3: 1000, quantity: 3 }]), 3000);
+  igual(volumeDoPedido([{ volume_cm3: 0, quantity: 3 }]), 0);
+});
+
+teste('caixa menor que o mínimo não cuba', () => {
+  const cfg = { ...TABELA, divisor_cubagem: 6000, cubagem_minima_cm3: 10000 };
+  igual(pesoCubado(9000, cfg), 0);
+  igual(pesoCubado(15000, cfg), 2500);
+});
+
+teste('produto sem medida cadastrada não inventa volume', async () => {
+  const r = await conferirCarrinho(dbFalso(CATALOGO), [{ product_id: 2, quantity: 1 }]);
+  igual(r.itens[0].volume_cm3, 0);
+});
+
+teste('o volume vem do banco e muda a faixa cobrada', async () => {
+  const r = await conferirCarrinho(dbFalso(CATALOGO), [{ product_id: 4, quantity: 1 }]);
+  igual(r.itens[0].volume_cm3, 15000);
+  const cfg = { ...TABELA, divisor_cubagem: 6000, gratis_acima: 0 };
+  // 400 g na balança, 2500 g de espaço: 2 kg acima do peso base
+  igual(pesoParaFrete(r.itens, cfg), 2500);
+  igual(precoDaOpcao({ config: cfg, id: 'entrega', uf: 'PA', subtotal: r.subtotal, peso_g: pesoParaFrete(r.itens, cfg) }), 20 + 10);
+  // sem cubagem o mesmo pedido nao passa do peso base e paga so a base
+  const semCubagem = { ...cfg, divisor_cubagem: 0 };
+  igual(precoDaOpcao({ config: semCubagem, id: 'entrega', uf: 'PA', subtotal: r.subtotal, peso_g: pesoParaFrete(r.itens, semCubagem) }), 20);
 });
 
 (async () => {

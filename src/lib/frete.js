@@ -32,6 +32,17 @@ const CONFIG_PADRAO = {
   peso_padrao_g: 300,
   // Até este peso o pedido paga só a base da região.
   peso_base_g: 500,
+  // Cubagem: quantos cm³ equivalem a 1 kg. Transportadora cobra pelo espaço
+  // ocupado quando o pacote é grande e leve — que é o caso de quase toda peça
+  // impressa em 3D. 6000 é o divisor usual das encomendas; 0 desliga a regra.
+  //
+  // Nasce ZERADO como o resto da tabela: até alguém decidir, o frete sai só pelo
+  // peso, exatamente como saía antes desta conta existir.
+  divisor_cubagem: 0,
+  // Volume a partir do qual a cubagem passa a valer (cm³). Existe porque
+  // transportadora costuma cubar só pacote grande — caixa pequena paga pelo peso
+  // mesmo sendo leve. 0 aplica a cubagem a qualquer volume.
+  cubagem_minima_cm3: 0,
   // Subtotal a partir do qual a entrega sai de graça. 0 desliga a regra.
   gratis_acima: 0,
   retirada: {
@@ -71,6 +82,8 @@ function mesclarConfig(bruto) {
   return {
     peso_padrao_g: numero(c.peso_padrao_g, CONFIG_PADRAO.peso_padrao_g),
     peso_base_g: numero(c.peso_base_g, CONFIG_PADRAO.peso_base_g),
+    divisor_cubagem: numero(c.divisor_cubagem),
+    cubagem_minima_cm3: numero(c.cubagem_minima_cm3),
     gratis_acima: dinheiro(c.gratis_acima),
     retirada: {
       ativa: retirada.ativa !== false,
@@ -103,6 +116,43 @@ function pesoDoPedido(itens, config) {
     const peso = numero(i.peso_g, 0) || c.peso_padrao_g;
     return soma + peso * qtd;
   }, 0);
+}
+
+/** Soma o volume do carrinho, em cm³. Item sem medida cadastrada entra com zero. */
+function volumeDoPedido(itens) {
+  return (itens || []).reduce((soma, i) => {
+    const qtd = Math.max(1, Math.round(numero(i.quantity, 1)));
+    return soma + numero(i.volume_cm3, 0) * qtd;
+  }, 0);
+}
+
+/**
+ * Peso que o volume representa, em gramas.
+ *
+ * Uma caixa de 30x25x20 dá 15.000 cm³: com divisor 6000, "pesa" 2,5 kg ainda que
+ * a peça dentro marque 400 g na balança. É por isso que tabela só por peso
+ * subcobra peça 3D — leve e volumosa é o normal aqui.
+ */
+function pesoCubado(volumeCm3, config) {
+  const c = mesclarConfig(config);
+  if (!(c.divisor_cubagem > 0)) return 0;
+  const v = numero(volumeCm3);
+  if (v <= 0 || v < c.cubagem_minima_cm3) return 0;
+  return Math.round((v / c.divisor_cubagem) * 1000);
+}
+
+/**
+ * O peso que vale para cobrar: o maior entre o da balança e o do espaço ocupado.
+ *
+ * Com a cubagem desligada (divisor 0, o padrão) devolve o peso real e nada muda.
+ * Produto sem medida cadastrada não atrapalha: entra com volume zero e o pedido
+ * é cobrado pelo peso, como antes.
+ */
+function pesoParaFrete(itens, config) {
+  return Math.max(
+    pesoDoPedido(itens, config),
+    pesoCubado(volumeDoPedido(itens), config)
+  );
 }
 
 /**
@@ -208,6 +258,9 @@ module.exports = {
   mesclarConfig,
   regiaoDaUf,
   pesoDoPedido,
+  volumeDoPedido,
+  pesoCubado,
+  pesoParaFrete,
   precoDaEntrega,
   calcularOpcoes,
   precoDaOpcao,
