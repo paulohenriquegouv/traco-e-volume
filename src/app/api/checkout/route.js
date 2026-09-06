@@ -5,6 +5,7 @@ import { generateOrderId } from '@/lib/auth';
 import { clienteAtual } from '@/lib/customer-auth';
 import { conferirCarrinho } from '@/lib/carrinho-servidor';
 import { lerConfig, pesoParaFrete, precoDaOpcao } from '@/lib/frete';
+import { lerConfigLoja } from '@/lib/config-loja';
 
 // CPF/CNPJ chega formatado do formulario; o MP so aceita digitos
 function onlyDigits(v) {
@@ -104,7 +105,8 @@ export async function POST(request) {
     // Preco e peso saem do banco, nunca do que o navegador mandou. O corpo da
     // requisicao e editavel por quem compra: aceitar o preco dali seria deixar
     // o cliente escolher quanto pagar.
-    const carrinho = await conferirCarrinho(db, body.items);
+    const loja = await lerConfigLoja(db);
+    const carrinho = await conferirCarrinho(db, body.items, loja.campanha);
     if (!carrinho.ok) return NextResponse.json({ error: carrinho.erro }, { status: 400 });
 
     const endereco = body.shipping_address || {};

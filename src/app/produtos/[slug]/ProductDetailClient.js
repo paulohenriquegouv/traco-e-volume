@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/components/CartContext';
+import { precoDoProduto } from '@/lib/campanha';
 
 function getWhatsAppLink(product) {
   const phone = process.env.NEXT_PUBLIC_WHATSAPP || '5591981158315';
@@ -43,15 +44,16 @@ function getWhatsAppLink(product) {
  * `selectedImage` era um estado que ninguém lia. Passava despercebido enquanto
  * dava para comprar direto da vitrine, onde essas três coisas aparecem.
  */
-export default function ProductDetailClient({ product }) {
+export default function ProductDetailClient({ product, campanha = null }) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [added, setAdded] = useState(false);
 
   const images = product.images?.length > 0 ? product.images : ['/placeholder.svg'];
-  const preco = Number(product.price);
-  const precoCheio = Number(product.compare_price);
+  // Preco ja com a liquidacao, quando ha uma valendo. O carrinho recebe o
+  // produto com este preco para o resumo bater com o que sera cobrado.
+  const { preco, preco_cheio: precoCheio, em_liquidacao, percentual } = precoDoProduto(product, campanha);
   const hasDiscount = precoCheio > preco;
   const discount = hasDiscount ? Math.round((1 - preco / precoCheio) * 100) : 0;
   const dinheiro = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -65,7 +67,7 @@ export default function ProductDetailClient({ product }) {
   const noLimite = quantity >= maxQtd;
 
   const handleAdd = () => {
-    addItem(product, quantity);
+    addItem({ ...product, price: preco }, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -130,10 +132,15 @@ export default function ProductDetailClient({ product }) {
           )}
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mt-1 mb-3">{product.name}</h1>
 
-          <div className="flex items-baseline gap-3 mb-6">
+          <div className="flex flex-wrap items-baseline gap-3 mb-6">
             <span className="text-3xl font-bold text-gray-900">{dinheiro(preco)}</span>
             {hasDiscount && (
               <span className="text-lg text-gray-400 line-through">{dinheiro(precoCheio)}</span>
+            )}
+            {em_liquidacao && (
+              <span className="bg-accent-50 text-accent-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                {percentual}% na liquidação
+              </span>
             )}
           </div>
 

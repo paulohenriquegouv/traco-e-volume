@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { precoDoProduto } from '@/lib/campanha';
 
 /**
  * Card do produto na listagem.
@@ -15,14 +16,15 @@ import Link from 'next/link';
  * Sem carrinho aqui não sobrou estado nenhum, então o card deixou de ser
  * componente de navegador: é só marcação, e não custa JavaScript na vitrine.
  */
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, campanha = null }) {
   const image = Array.isArray(product.images) && product.images.length > 0
     ? product.images[0]
     : '/placeholder.svg';
-  const hasDiscount = product.compare_price && product.compare_price > product.price;
-  const discount = hasDiscount
-    ? Math.round((1 - product.price / product.compare_price) * 100)
-    : 0;
+  // O preco ja sai com a liquidacao aplicada, quando ha uma valendo.
+  const { preco, preco_cheio, em_liquidacao } = precoDoProduto(product, campanha);
+  const hasDiscount = preco_cheio > preco;
+  const discount = hasDiscount ? Math.round((1 - preco / preco_cheio) * 100) : 0;
+  const dinheiro = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
     <div className="card-3d group bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -39,6 +41,11 @@ export default function ProductCard({ product }) {
             -{discount}%
           </span>
         )}
+        {em_liquidacao && (
+          <span className="absolute top-3 right-3 bg-gray-900/85 text-white text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full">
+            Liquidação
+          </span>
+        )}
       </Link>
 
       {/* Info */}
@@ -53,13 +60,9 @@ export default function ProductCard({ product }) {
         </Link>
 
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg font-bold text-gray-900">
-            {product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-          </span>
+          <span className="text-lg font-bold text-gray-900">{dinheiro(preco)}</span>
           {hasDiscount && (
-            <span className="text-sm text-gray-400 line-through">
-              {product.compare_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </span>
+            <span className="text-sm text-gray-400 line-through">{dinheiro(preco_cheio)}</span>
           )}
         </div>
 

@@ -6,6 +6,9 @@ const {
   PADRAO, mesclarBloco, mesclarTudo,
   metodosAtivos, parcelasPara, rotulosDeStatus,
 } = require('../src/lib/config-loja');
+const {
+  mesclarCampanha, vigente, alcanca, precoDoProduto, textoDaFaixa,
+} = require('../src/lib/campanha');
 
 let passou = 0, falhou = 0;
 const casos = [];
@@ -105,6 +108,84 @@ teste('número inválido em prazo não vira NaN', () => {
   igual(mesclarBloco('prazos', { producao_dias: 'três' }).producao_dias, 0);
   igual(mesclarBloco('prazos', { producao_dias: -5 }).producao_dias, 0);
   igual(mesclarBloco('prazos', { producao_dias: '4' }).producao_dias, 4);
+});
+
+
+// ---------- liquidação ----------
+
+const LIQUIDA = { ativa: true, nome: 'Liquidação de Primavera', percentual: 20, inicio: '2026-09-01', fim: '2026-09-30' };
+const VASO = { price: 100, compare_price: null, category: 'decoração' };
+
+teste('liquidação desligada não desconta nada', () => {
+  igual(precoDoProduto(VASO, { ...LIQUIDA, ativa: false }, '2026-09-15').preco, 100);
+  igual(precoDoProduto(VASO, null, '2026-09-15').preco, 100);
+});
+
+teste('percentual zero é o mesmo que desligada', () => {
+  igual(vigente({ ...LIQUIDA, percentual: 0 }, '2026-09-15'), false);
+});
+
+teste('vale só dentro do período', () => {
+  igual(vigente(LIQUIDA, '2026-08-31'), false, 'véspera');
+  igual(vigente(LIQUIDA, '2026-09-01'), true, 'primeiro dia entra');
+  igual(vigente(LIQUIDA, '2026-09-30'), true, 'último dia ainda vale');
+  igual(vigente(LIQUIDA, '2026-10-01'), false, 'no dia seguinte acabou');
+});
+
+teste('sem data de início começa assim que liga; sem fim não termina', () => {
+  igual(vigente({ ...LIQUIDA, inicio: '' }, '2020-01-01'), true);
+  igual(vigente({ ...LIQUIDA, fim: '' }, '2099-01-01'), true);
+});
+
+teste('data escrita errado é ignorada em vez de virar filtro maluco', () => {
+  igual(mesclarCampanha({ inicio: '30/09/2026' }).inicio, '');
+  igual(mesclarCampanha({ fim: 'amanhã' }).fim, '');
+});
+
+teste('percentual fica entre 0 e 90', () => {
+  igual(mesclarCampanha({ percentual: 200 }).percentual, 90, 'um zero a mais não zera a loja');
+  igual(mesclarCampanha({ percentual: -5 }).percentual, 0);
+  igual(mesclarCampanha({ percentual: 'vinte' }).percentual, 0);
+  igual(mesclarCampanha({ percentual: '15' }).percentual, 15);
+});
+
+teste('o desconto sai em centavos redondos', () => {
+  igual(precoDoProduto({ price: 100 }, LIQUIDA, '2026-09-15').preco, 80);
+  igual(precoDoProduto({ price: 59.9 }, LIQUIDA, '2026-09-15').preco, 47.92);
+  igual(precoDoProduto({ price: 34.9 }, { ...LIQUIDA, percentual: 15 }, '2026-09-15').preco, 29.67);
+});
+
+teste('o preço riscado é o maior que a peça já custou na tela', () => {
+  const r = precoDoProduto({ price: 100 }, LIQUIDA, '2026-09-15');
+  igual(r.preco_cheio, 100);
+  // produto que ja estava em promocao mantem o comparativo como riscado
+  const r2 = precoDoProduto({ price: 100, compare_price: 150 }, LIQUIDA, '2026-09-15');
+  igual(r2.preco, 80);
+  igual(r2.preco_cheio, 150);
+});
+
+teste('fora da liquidação, o desconto do cadastro continua valendo', () => {
+  const r = precoDoProduto({ price: 100, compare_price: 150 }, LIQUIDA, '2026-10-15');
+  igual(r.preco, 100);
+  igual(r.preco_cheio, 150);
+  igual(r.em_liquidacao, false);
+});
+
+teste('liquidação por categoria não alcança o resto do catálogo', () => {
+  const so = { ...LIQUIDA, categoria: 'decoração' };
+  igual(alcanca(VASO, so, '2026-09-15'), true);
+  igual(alcanca({ price: 10, category: 'escritório' }, so, '2026-09-15'), false);
+  igual(precoDoProduto({ price: 10, category: 'escritório' }, so, '2026-09-15').preco, 10);
+});
+
+teste('categoria compara sem se importar com maiúscula', () => {
+  igual(alcanca({ category: 'Decoração' }, { ...LIQUIDA, categoria: 'decoração' }, '2026-09-15'), true);
+});
+
+teste('a faixa monta o texto sozinha, e o texto próprio manda', () => {
+  igual(textoDaFaixa(LIQUIDA), 'Liquidação de Primavera: 20% de desconto');
+  igual(textoDaFaixa({ ...LIQUIDA, categoria: 'vasos' }), 'Liquidação de Primavera: 20% de desconto em vasos');
+  igual(textoDaFaixa({ ...LIQUIDA, texto: 'Tudo pela metade!' }), 'Tudo pela metade!');
 });
 
 (async () => {

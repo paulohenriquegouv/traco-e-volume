@@ -17,6 +17,21 @@ import PainelFrete from './PainelFrete';
 const ic = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500';
 
 const BLOCOS = {
+  campanha: {
+    aba: 'Liquidação',
+    descricao: 'Um desconto para a loja toda, com data para começar e para acabar. '
+      + 'Nada é gravado no cadastro dos produtos: quando a data de fim passa, os preços voltam '
+      + 'ao normal sozinhos, sem você desfazer nada produto por produto.',
+    campos: [
+      { campo: 'ativa', rotulo: 'Liquidação ligada', tipo: 'booleano' },
+      { campo: 'nome', rotulo: 'Nome da liquidação', largura: 'metade', ajuda: 'Aparece na faixa do topo do site.' },
+      { campo: 'percentual', rotulo: 'Desconto (%)', tipo: 'numero', largura: 'metade', ajuda: 'De 0 a 90. Aplicado sobre o preço de venda de cada produto.' },
+      { campo: 'inicio', rotulo: 'Começa em', tipo: 'data', largura: 'metade', ajuda: 'Em branco começa assim que você ligar.' },
+      { campo: 'fim', rotulo: 'Termina em', tipo: 'data', largura: 'metade', ajuda: 'Em branco não termina — e liquidação sem fim vira preço normal.' },
+      { campo: 'categoria', rotulo: 'Só nesta categoria', largura: 'metade', ajuda: 'Em branco vale para o catálogo inteiro.' },
+      { campo: 'texto', rotulo: 'Texto da faixa', ajuda: 'Em branco, monta um texto com o nome e o desconto.' },
+    ],
+  },
   loja: {
     aba: 'Loja',
     descricao: 'Como a loja se apresenta e onde o cliente encontra você.',
@@ -71,7 +86,7 @@ const BLOCOS = {
 };
 
 // A entrega entra no meio: é o parâmetro que mais muda depois que a loja abre.
-const ABAS = ['loja', 'vitrine', 'entrega', 'pagamento', 'prazos'];
+const ABAS = ['loja', 'vitrine', 'entrega', 'pagamento', 'campanha', 'prazos'];
 const NOME_DA_ABA = { ...Object.fromEntries(Object.entries(BLOCOS).map(([k, b]) => [k, b.aba])), entrega: 'Entrega' };
 
 function Campo({ def, valor, aoMudar }) {
@@ -98,7 +113,7 @@ function Campo({ def, valor, aoMudar }) {
         <textarea rows={3} {...comum} />
       ) : (
         <input
-          type={def.tipo === 'numero' || def.tipo === 'dinheiro' ? 'number' : def.tipo || 'text'}
+          type={def.tipo === 'numero' || def.tipo === 'dinheiro' ? 'number' : def.tipo === 'data' ? 'date' : def.tipo || 'text'}
           min={def.tipo === 'numero' || def.tipo === 'dinheiro' ? '0' : undefined}
           step={def.tipo === 'dinheiro' ? '0.01' : def.tipo === 'numero' ? '1' : undefined}
           {...comum}

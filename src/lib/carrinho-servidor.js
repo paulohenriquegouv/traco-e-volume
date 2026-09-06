@@ -15,6 +15,7 @@
  */
 
 const { volumeCm3 } = require('./dimensoes');
+const { precoDoProduto } = require('./campanha');
 
 const MAX_ITENS = 50;
 const MAX_QTD = 99;
@@ -33,7 +34,7 @@ function inteiro(v) {
 /**
  * @returns {{ok: true, itens: Array, subtotal: number} | {ok: false, erro: string}}
  */
-async function conferirCarrinho(db, recebidos) {
+async function conferirCarrinho(db, recebidos, campanha = null) {
   if (!Array.isArray(recebidos) || recebidos.length === 0) {
     return { ok: false, erro: 'Carrinho vazio' };
   }
@@ -82,7 +83,10 @@ async function conferirCarrinho(db, recebidos) {
     if (Number(p.active) === 0) {
       return { ok: false, erro: `"${p.name}" saiu do catálogo. Remova-o do carrinho para continuar.` };
     }
-    const price = Math.round(Number(p.price) * 100) / 100;
+    // A liquidacao entra AQUI, no preco que vem do banco -- nunca no que o
+    // navegador manda. Mostrar 20% de desconto e cobrar cheio seria a pior forma
+    // de errar; cobrar o desconto de uma liquidacao vencida, a segunda pior.
+    const price = precoDoProduto(p, campanha).preco;
     const total = Math.round(price * quantity * 100) / 100;
     // weight fica nulo em produto sem peso cadastrado; quem decide o que fazer
     // com isso é o cálculo do frete (usa o peso padrão da configuração).

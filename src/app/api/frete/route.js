@@ -16,10 +16,12 @@ export async function POST(request) {
     const body = await request.json();
     const db = await getDb();
 
-    const carrinho = await conferirCarrinho(db, body.items);
-    if (!carrinho.ok) return NextResponse.json({ error: carrinho.erro }, { status: 400 });
-
     const [config, loja] = await Promise.all([lerConfig(db), lerConfigLoja(db)]);
+
+    // Com a liquidacao valendo, o subtotal e o de liquidacao -- e e ele que
+    // decide se o pedido passou do minimo para o frete gratis.
+    const carrinho = await conferirCarrinho(db, body.items, loja.campanha);
+    if (!carrinho.ok) return NextResponse.json({ error: carrinho.erro }, { status: 400 });
     const peso_g = pesoParaFrete(carrinho.itens, config);
 
     const resultado = calcularOpcoes({

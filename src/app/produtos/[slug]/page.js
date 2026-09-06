@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
+import { lerConfigLoja } from '@/lib/config-loja';
 import ProductDetailClient from './ProductDetailClient';
 
 async function getProduct(slug) {
@@ -53,6 +54,11 @@ export async function generateMetadata({ params }) {
 
 export default async function ProdutoDetalhePage({ params }) {
   const product = await getProduct(params.slug);
+  // O preco mostrado aqui e o mesmo que o checkout vai cobrar: os dois passam
+  // pelo calculo da liquidacao.
+  const campanha = await (async () => {
+    try { return (await lerConfigLoja(await getDb())).campanha; } catch { return null; }
+  })();
 
   if (!product) {
     return (
@@ -72,7 +78,7 @@ export default async function ProdutoDetalhePage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(dadosDoProduto(product, site)) }}
       />
-      <ProductDetailClient product={product} />
+      <ProductDetailClient product={product} campanha={campanha} />
     </>
   );
 }

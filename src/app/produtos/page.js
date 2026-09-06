@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
+import { lerConfigLoja } from '@/lib/config-loja';
 import ProductCard from '@/components/ProductCard';
 import FiltroCategorias from '@/components/FiltroCategorias';
 
@@ -23,16 +24,21 @@ async function getProducts(searchParams) {
     const products = await db.prepare(`SELECT * FROM products ${w} ORDER BY featured DESC, created_at DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
     const categories = await db.prepare("SELECT category, COUNT(*) as count FROM products WHERE active = 1 AND category != '' GROUP BY category ORDER BY count DESC").all();
 
+    // A liquidacao sai da mesma consulta que ja carrega a pagina: o preco na
+    // vitrine tem que ser o mesmo que o servidor vai cobrar no checkout.
+    const loja = await lerConfigLoja(db);
+
     return {
       products: products.map(p => ({ ...p, images: JSON.parse(p.images || '[]') })),
       categories,
+      campanha: loja.campanha,
       pagination: { pagina, total, totalPages: Math.ceil(total / limit) },
     };
-  } catch { return { products: [], categories: [], pagination: { pagina: 1, total: 0, totalPages: 0 } }; }
+  } catch { return { products: [], categories: [], campanha: null, pagination: { pagina: 1, total: 0, totalPages: 0 } }; }
 }
 
 export default async function ProdutosPage({ searchParams }) {
-  const { products, categories, pagination } = await getProducts(searchParams);
+  const { products, categories, pagination, campanha } = await getProducts(searchParams);
   const cat = searchParams?.categoria || '';
   const busca = searchParams?.busca || '';
 
@@ -59,7 +65,7 @@ export default async function ProdutosPage({ searchParams }) {
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 {products.map(p => (
-                  <ProductCard key={p.id} product={p} />
+                  <ProductCard key={p.id} product={p} campanha={campanha} />
                 ))}
               </div>
 

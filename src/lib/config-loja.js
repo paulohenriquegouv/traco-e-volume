@@ -14,7 +14,12 @@
  * `npm run teste-config`.
  */
 
+const { PADRAO_CAMPANHA, mesclarCampanha } = require('./campanha');
+
 const PADRAO = {
+  // A liquidacao mora aqui junto com o resto porque e editada na mesma tela; a
+  // conta em si fica em campanha.js, que a vitrine e o checkout tambem usam.
+  campanha: PADRAO_CAMPANHA,
   loja: {
     nome: 'Traço & Volume',
     email: '',
@@ -87,6 +92,8 @@ function mesclarBloco(chave, bruto) {
   const p = PADRAO[chave];
   if (!p) return null;
   const c = bruto && typeof bruto === 'object' ? bruto : {};
+
+  if (chave === 'campanha') return mesclarCampanha(bruto);
 
   if (chave === 'pagamento') {
     return {
