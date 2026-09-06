@@ -10,9 +10,10 @@
  * A tela continua sendo a dona: qualquer coisa alterada por ela depois vale mais
  * que este arquivo, que não roda sozinho nunca.
  *
- * Os preços nascem ZERADOS aqui de propósito, pelo mesmo motivo que nascem
- * zerados no resto do sistema: ninguém é cobrado por um valor que não veio de
- * uma cotação. O roteiro para levantá-los está junto da tabela, abaixo.
+ * Os preços que estão aqui são ESTIMATIVA, não cotação — a decisão foi essa em
+ * 06/09/2026, com a loja ainda sem divulgação e sem venda real: melhor começar
+ * perto do certo e corrigir na primeira postagem do que seguir com frete zero.
+ * O roteiro para trocá-los pelos valores reais está junto da tabela, abaixo.
  */
 const fs = require('fs');
 const path = require('path');
@@ -33,26 +34,29 @@ const EMBALAGENS = [
 // ---------------------------------------------------------------------------
 // Preço por região, saindo de Belém (PA) — CEP 66050-585.
 //
-// ZERADO ATÉ A COTAÇÃO CHEGAR. Nenhuma tabela pública dá o preço por rota, e o
-// número que se vê publicado (R$ 10 a R$ 12 por quilo) é de rota do Sudeste:
-// aplicá-lo a quem posta do Norte erraria para MENOS, e a diferença sairia do
-// bolso da loja em toda venda. Enquanto está zerado, a loja cobra frete zero,
-// como cobrava antes.
+// ESTIMATIVA DE PARTIDA, decidida assim em 06/09/2026: a loja ainda não foi
+// divulgada e não tem venda real, então vale mais começar cobrando algo perto do
+// certo e corrigir com a primeira postagem do que seguir com frete zero.
 //
-// Para preencher: cotar o PAC de 66050-585 com a caixa média (27x18x9) para
-// 66815-000 (Belém) e 01310-100 (São Paulo), em 0,5 kg e 2 kg. Com os quatro
-// valores saem a base e o preço por quilo do Norte e do Sudeste; as outras três
-// regiões se escalonam entre eles.
+// De onde vêm os números: Belém é a origem mais cara do país para encomenda, e
+// do Pará todo destino é longo — por isso a diferença entre a região mais barata
+// e a mais cara é menor do que seria numa loja do Sudeste. As referências
+// públicas (R$ 10 a R$ 12 por quilo) são de rota do Sudeste e serviram só para
+// ancorar a ordem de grandeza, não para copiar.
+//
+// NÃO É COTAÇÃO. Para trocar pelos valores reais, cotar o PAC de 66050-585 com a
+// caixa média (27x18x9) para 66815-000 (Belém) e 01310-100 (São Paulo), em
+// 0,5 kg e 2 kg:
 //
 //   base     = preço de 0,5 kg (pedido até o peso base)
 //   kg_extra = (preço de 2 kg menos o preço de 0,5 kg) dividido por 2
 // ---------------------------------------------------------------------------
 const REGIOES = {
-  norte:        { base: 0, kg_extra: 0, prazo_dias: 0 },
-  nordeste:     { base: 0, kg_extra: 0, prazo_dias: 0 },
-  centro_oeste: { base: 0, kg_extra: 0, prazo_dias: 0 },
-  sudeste:      { base: 0, kg_extra: 0, prazo_dias: 0 },
-  sul:          { base: 0, kg_extra: 0, prazo_dias: 0 },
+  norte:        { base: 25, kg_extra: 6,  prazo_dias: 6 },
+  nordeste:     { base: 32, kg_extra: 8,  prazo_dias: 9 },
+  centro_oeste: { base: 36, kg_extra: 9,  prazo_dias: 10 },
+  sudeste:      { base: 38, kg_extra: 10, prazo_dias: 10 },
+  sul:          { base: 42, kg_extra: 11, prazo_dias: 12 },
 };
 
 const OUTROS = {
