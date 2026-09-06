@@ -56,6 +56,14 @@ export default function ProductDetailClient({ product }) {
   const discount = hasDiscount ? Math.round((1 - preco / precoCheio) * 100) : 0;
   const dinheiro = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+  // Estoque zero nao e falta: peca impressa em 3D se produz sob encomenda. O que
+  // nao pode e vender 10 de um produto que tem 3 em casa -- o estoque baixa
+  // sozinho quando o pagamento e aprovado, e ficaria negativo.
+  const estoque = Number(product.stock) || 0;
+  const sobEncomenda = estoque <= 0;
+  const maxQtd = sobEncomenda ? 99 : estoque;
+  const noLimite = quantity >= maxQtd;
+
   const handleAdd = () => {
     addItem(product, quantity);
     setAdded(true);
@@ -171,7 +179,7 @@ export default function ProductDetailClient({ product }) {
 
       {/* Compra: o último bloco da página, depois de tudo que há para ler. */}
       <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-6 md:p-8">
-        <div className="flex flex-wrap items-baseline justify-between gap-3 mb-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-3 mb-2">
           <h2 className="text-xl font-bold text-gray-900">Levar este produto</h2>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-gray-900">{dinheiro(preco)}</span>
@@ -179,19 +187,42 @@ export default function ProductDetailClient({ product }) {
           </div>
         </div>
 
+        {/* O estoque tambem esta na ficha, la em cima -- mas a quantidade se
+            escolhe aqui embaixo, e a essa altura aquele quadro ja saiu da tela. */}
+        <p className="text-sm text-gray-500 mb-5">
+          {sobEncomenda ? (
+            <>Sob encomenda — produzimos assim que o pedido entra.</>
+          ) : (
+            <>
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2 align-middle" aria-hidden />
+              Em estoque: <strong className="text-gray-900">{estoque}</strong>{' '}
+              {estoque === 1 ? 'unidade' : 'unidades'}
+              {estoque <= 3 && <span className="text-amber-700"> — últimas peças</span>}
+            </>
+          )}
+        </p>
+
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center border border-gray-200 rounded-lg">
             <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))}
               className="btn px-4 py-3 text-gray-500 hover:text-gray-900" aria-label="Diminuir quantidade">−</button>
             <span className="px-3 py-3 text-gray-900 font-medium w-12 text-center" aria-live="polite">{quantity}</span>
-            <button type="button" onClick={() => setQuantity(quantity + 1)}
-              className="btn px-4 py-3 text-gray-500 hover:text-gray-900" aria-label="Aumentar quantidade">+</button>
+            <button type="button" onClick={() => setQuantity(Math.min(maxQtd, quantity + 1))}
+              disabled={noLimite}
+              className="btn px-4 py-3 text-gray-500 hover:text-gray-900 disabled:text-gray-200 disabled:cursor-not-allowed"
+              aria-label="Aumentar quantidade">+</button>
           </div>
           <button onClick={handleAdd}
             className={`btn-3d flex-1 min-w-[12rem] py-3 rounded-lg font-medium transition-all ${added ? 'bg-green-500 text-white' : 'bg-primary-600 hover:bg-primary-700 text-white'}`}>
             {added ? '✓ Adicionado!' : 'Adicionar ao Carrinho'}
           </button>
         </div>
+
+        {noLimite && !sobEncomenda && (
+          <p className="text-sm text-amber-700 mt-3">
+            É tudo o que temos deste produto agora. Para levar mais, fale com a gente pelo WhatsApp.
+          </p>
+        )}
 
         <a href={getWhatsAppLink(product)} target="_blank" rel="noopener noreferrer"
           className="btn-3d mt-3 flex items-center justify-center gap-2 w-full text-center bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-medium">
