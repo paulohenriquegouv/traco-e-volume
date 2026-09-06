@@ -35,6 +35,10 @@ const PADRAO = {
     botao_produtos: 'Ver Produtos',
     botao_contato: 'Fale Conosco',
     titulo_categorias: 'Categorias',
+    titulo_destaques: 'Produtos em Destaque',
+    // Por quantos dias um produto recem-cadastrado leva o selo de novidade.
+    // 0 desliga o selo.
+    dias_novidade: 30,
   },
   pagamento: {
     pix_ativo: true,

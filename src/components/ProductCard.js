@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { precoDoProduto } from '@/lib/campanha';
+import { seloDoProduto } from '@/lib/vitrine';
 
 /**
  * Card do produto na listagem.
@@ -16,7 +17,7 @@ import { precoDoProduto } from '@/lib/campanha';
  * Sem carrinho aqui não sobrou estado nenhum, então o card deixou de ser
  * componente de navegador: é só marcação, e não custa JavaScript na vitrine.
  */
-export default function ProductCard({ product, campanha = null }) {
+export default function ProductCard({ product, campanha = null, diasNovidade = 30 }) {
   const image = Array.isArray(product.images) && product.images.length > 0
     ? product.images[0]
     : '/placeholder.svg';
@@ -25,6 +26,7 @@ export default function ProductCard({ product, campanha = null }) {
   const hasDiscount = preco_cheio > preco;
   const discount = hasDiscount ? Math.round((1 - preco / preco_cheio) * 100) : 0;
   const dinheiro = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const selo = seloDoProduto(product, { campanha, diasNovidade });
 
   return (
     <div className="card-3d group bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -41,9 +43,13 @@ export default function ProductCard({ product, campanha = null }) {
             -{discount}%
           </span>
         )}
-        {em_liquidacao && (
-          <span className="absolute top-3 right-3 bg-gray-900/85 text-white text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full">
-            Liquidação
+        {selo && (
+          <span className={`absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full text-white ${
+            selo.id === 'liquidacao' ? 'bg-gray-900/85'
+              : selo.id === 'novidade' ? 'bg-green-600/90'
+              : 'bg-primary-600/90'
+          }`}>
+            {selo.texto}
           </span>
         )}
       </Link>

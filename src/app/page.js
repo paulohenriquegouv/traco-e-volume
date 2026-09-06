@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import { lerConfigLoja, mesclarTudo } from '@/lib/config-loja';
+import ProductCard from '@/components/ProductCard';
 
 // A home lista destaques e categorias vindos do banco. Sem isto ela seria congelada no
 // build e produto novo nunca apareceria. 60s mantém a home rápida sem ficar desatualizada.
@@ -13,15 +14,28 @@ export const revalidate = 60;
  * que o Google le, e um titulo que so aparece depois de uma requisicao seria um
  * titulo que o buscador nao ve.
  */
-async function getVitrine() {
+/**
+ * Os produtos marcados como Destaque no cadastro.
+ *
+ * A seção já existiu, sumiu num refino e deixou a consulta órfã para trás — a
+ * consulta foi removida junto. Agora ela volta com quem a desenha: marcar
+ * "Destaque" num produto tem efeito visível na página inicial, e não só na
+ * ordem da vitrine.
+ */
+async function getDestaques() {
   try {
     const db = await getDb();
-    return (await lerConfigLoja(db)).vitrine;
-  } catch {
-    // Banco fora do ar nao pode derrubar a home: o padrao e o texto que estava
-    // escrito aqui antes desta tela existir.
-    return mesclarTudo(null).vitrine;
-  }
+    const products = await db
+      .prepare('SELECT * FROM products WHERE active = 1 AND featured = 1 ORDER BY created_at DESC LIMIT 8')
+      .all();
+    return products.map(p => ({ ...p, images: JSON.parse(p.images || '[]') }));
+  } catch { return []; }
+}
+
+async function getConfigLoja() {
+  try {
+    return await lerConfigLoja(await getDb());
+  } catch { return mesclarTudo(null); }
 }
 
 async function getCategories() {
@@ -32,9 +46,10 @@ async function getCategories() {
 }
 
 export default async function HomePage() {
-  // A secao de destaques saiu da home num refino anterior; a consulta que a
-  // alimentava ficou para tras, buscando 8 produtos que ninguem desenhava.
-  const [categories, vitrine] = await Promise.all([getCategories(), getVitrine()]);
+  const [categories, destaques, loja] = await Promise.all([
+    getCategories(), getDestaques(), getConfigLoja(),
+  ]);
+  const vitrine = loja.vitrine;
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_LINK || '#';
 
   return (
@@ -84,6 +99,30 @@ export default async function HomePage() {
                   <p className="font-semibold text-gray-900 group-hover:text-primary-600 capitalize">{cat.category}</p>
                   <p className="text-sm text-gray-400 mt-1">{cat.count} produto{cat.count > 1 ? 's' : ''}</p>
                 </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Destaques */}
+      {destaques.length > 0 && (
+        <section className="bg-gray-50 py-12 md:py-16">
+          <div className="container-custom">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">{vitrine.titulo_destaques}</h2>
+              <Link href="/produtos" className="text-sm font-medium text-primary-600 hover:text-primary-700">
+                Ver todos os produtos →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {destaques.map(p => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  campanha={loja.campanha}
+                  diasNovidade={vitrine.dias_novidade}
+                />
               ))}
             </div>
           </div>

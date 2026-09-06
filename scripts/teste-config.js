@@ -9,6 +9,7 @@ const {
 const {
   mesclarCampanha, vigente, alcanca, precoDoProduto, textoDaFaixa,
 } = require('../src/lib/campanha');
+const { ehNovidade, seloDoProduto } = require('../src/lib/vitrine');
 
 let passou = 0, falhou = 0;
 const casos = [];
@@ -186,6 +187,38 @@ teste('a faixa monta o texto sozinha, e o texto próprio manda', () => {
   igual(textoDaFaixa(LIQUIDA), 'Liquidação de Primavera: 20% de desconto');
   igual(textoDaFaixa({ ...LIQUIDA, categoria: 'vasos' }), 'Liquidação de Primavera: 20% de desconto em vasos');
   igual(textoDaFaixa({ ...LIQUIDA, texto: 'Tudo pela metade!' }), 'Tudo pela metade!');
+});
+
+
+// ---------- selos da vitrine ----------
+
+teste('produto recem-cadastrado e novidade; produto antigo nao', () => {
+  igual(ehNovidade({ created_at: '2026-09-01T10:00:00Z' }, 30, '2026-09-15'), true);
+  igual(ehNovidade({ created_at: '2026-07-01T10:00:00Z' }, 30, '2026-09-15'), false);
+  // "dura 30 dias" conta o dia do cadastro: vale do dia 0 ao 29, e sai no 30o
+  igual(ehNovidade({ created_at: '2026-08-17T10:00:00Z' }, 30, '2026-09-15'), true, '29o dia ainda conta');
+  igual(ehNovidade({ created_at: '2026-08-16T10:00:00Z' }, 30, '2026-09-15'), false, 'no 30o dia sai');
+});
+
+teste('zero dias desliga o selo de novidade', () => {
+  igual(ehNovidade({ created_at: '2026-09-15T10:00:00Z' }, 0, '2026-09-15'), false);
+});
+
+teste('cadastro sem data ou com data invalida nao vira novidade', () => {
+  igual(ehNovidade({}, 30, '2026-09-15'), false);
+  igual(ehNovidade({ created_at: 'ontem' }, 30, '2026-09-15'), false);
+});
+
+teste('so um selo por card, na ordem de prioridade', () => {
+  const novo = { created_at: '2026-09-10T10:00:00Z', featured: 1, category: 'decoração' };
+  const opts = { campanha: LIQUIDA, diasNovidade: 30, hoje: '2026-09-15' };
+  igual(seloDoProduto(novo, opts).id, 'liquidacao', 'liquidacao passa na frente');
+  igual(seloDoProduto(novo, { ...opts, campanha: null }).id, 'novidade', 'sem liquidacao, novidade');
+  igual(seloDoProduto({ ...novo, created_at: '2026-01-01T10:00:00Z' }, { ...opts, campanha: null }).id, 'destaque');
+});
+
+teste('produto comum nao anuncia nada', () => {
+  igual(seloDoProduto({ created_at: '2026-01-01T10:00:00Z', featured: 0 }, { campanha: null, diasNovidade: 30, hoje: '2026-09-15' }), null);
 });
 
 (async () => {

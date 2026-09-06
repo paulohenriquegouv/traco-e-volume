@@ -32,13 +32,14 @@ async function getProducts(searchParams) {
       products: products.map(p => ({ ...p, images: JSON.parse(p.images || '[]') })),
       categories,
       campanha: loja.campanha,
+      diasNovidade: loja.vitrine.dias_novidade,
       pagination: { pagina, total, totalPages: Math.ceil(total / limit) },
     };
-  } catch { return { products: [], categories: [], campanha: null, pagination: { pagina: 1, total: 0, totalPages: 0 } }; }
+  } catch { return { products: [], categories: [], campanha: null, diasNovidade: 0, pagination: { pagina: 1, total: 0, totalPages: 0 } }; }
 }
 
 export default async function ProdutosPage({ searchParams }) {
-  const { products, categories, pagination, campanha } = await getProducts(searchParams);
+  const { products, categories, pagination, campanha, diasNovidade } = await getProducts(searchParams);
   const cat = searchParams?.categoria || '';
   const busca = searchParams?.busca || '';
 
@@ -65,7 +66,7 @@ export default async function ProdutosPage({ searchParams }) {
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 {products.map(p => (
-                  <ProductCard key={p.id} product={p} campanha={campanha} />
+                  <ProductCard key={p.id} product={p} campanha={campanha} diasNovidade={diasNovidade} />
                 ))}
               </div>
 
