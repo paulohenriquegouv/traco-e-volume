@@ -11,6 +11,7 @@
     "init-db": "node scripts/init-db.js",
     "gerar-docs": "node scripts/gerar-documentacao.js",
     "teste-webhook": "node scripts/teste-webhook.js",
+    "teste-frete": "node scripts/teste-frete.js",
     "verifica-webhook": "node scripts/verifica-webhook.js",
     "backup": "node scripts/backup-banco.js",
     "restaurar": "node scripts/restaurar-banco.js",
@@ -18,6 +19,7 @@
     "migrar-contas": "node scripts/migrar-contas.js",
     "testar-email": "node scripts/testar-email.js",
     "migrar-tokens": "node scripts/migrar-tokens.js",
+    "migrar-frete": "node scripts/migrar-frete.js",
     "testar-email-prod": "node scripts/testar-email-prod.js",
     "reenviar-verificacao": "node scripts/reenviar-verificacao.js"
   },

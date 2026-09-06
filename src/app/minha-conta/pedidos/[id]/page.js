@@ -38,7 +38,9 @@ export default function DetalheDoPedido() {
   }
 
   const end = pedido.shipping_address || {};
-  const temEndereco = end.address || end.city;
+  const retirada = pedido.shipping_method === 'retirada';
+  const temEndereco = !retirada && (end.address || end.city);
+  const frete = Number(pedido.shipping || 0);
 
   return (
     <div className="space-y-4">
@@ -74,9 +76,19 @@ export default function DetalheDoPedido() {
             </li>
           ))}
         </ul>
-        <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
-          <span className="font-bold text-gray-900">Total</span>
-          <span className="font-bold text-lg text-gray-900">{dinheiro(pedido.total)}</span>
+        <div className="pt-4 mt-2 border-t border-gray-100 space-y-2">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>Subtotal</span>
+            <span>{dinheiro(Number(pedido.total) - frete)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>Frete{pedido.shipping_method === 'retirada' ? ' (retirada)' : ''}</span>
+            <span>{frete > 0 ? dinheiro(frete) : <span className="text-green-600">Grátis</span>}</span>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <span className="font-bold text-gray-900">Total</span>
+            <span className="font-bold text-lg text-gray-900">{dinheiro(pedido.total)}</span>
+          </div>
         </div>
       </div>
 
@@ -88,6 +100,13 @@ export default function DetalheDoPedido() {
             {end.neighborhood ? `${end.neighborhood}, ` : ''}{end.city}{end.state ? `/${end.state}` : ''}
             {end.zip ? ` · CEP ${end.zip}` : ''}
           </p>
+        </div>
+      )}
+
+      {retirada && (
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <h3 className="font-bold text-gray-900 mb-2">Entrega</h3>
+          <p className="text-sm text-gray-600">Você escolheu retirar este pedido. Avisamos quando estiver pronto.</p>
         </div>
       )}
 

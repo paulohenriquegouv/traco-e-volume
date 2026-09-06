@@ -242,6 +242,59 @@ faz o servidor rejeitar toda notificação real com 401, o que é pior que não 
 
 ---
 
+## 7.2 🚚 Frete e entrega
+
+**Tabela de preços:** fica no banco, em `settings.frete` (JSON), e é editada em **/admin/frete**.
+Nada de valor de frete escrito no código.
+
+**Conta:** `base da região + adicional por quilo (ou fração) que passar do peso base`.
+O peso vem de `products.weight`; produto sem peso cadastrado entra com o *peso padrão* da
+configuração — sem isso um cadastro incompleto faria o pedido pesar zero e sair mais barato.
+
+**Regiões:** agrupamento do IBGE (Norte, Nordeste, Centro-Oeste, Sudeste, Sul), resolvidas pela
+**UF**, não pela faixa de CEP. A UF chega preenchida pela busca do ViaCEP e continua editável.
+
+**Opções no checkout:**
+- `retirada` — sempre R$ 0, some se o admin desligar.
+- `entrega` — só aparece quando a UF é conhecida. Zera sozinha quando o subtotal passa do
+  *frete grátis acima de* (0 desliga a regra).
+
+**Nasce zerada de propósito.** Loja recém-migrada cobra frete zero — o mesmo que fazia antes
+desta funcionalidade — até alguém definir os valores em /admin/frete. Ninguém é cobrado por um
+número que o código inventou. A tela avisa enquanto a tabela estiver zerada e oferece uma
+sugestão de partida, que só entra nos campos com um clique e só vale depois de salvar.
+
+**O servidor não confia no navegador.** `POST /api/frete` só *mostra* as opções; quem cobra é o
+`/api/checkout`, que refaz a conta pelo **id** da opção escolhida. Preço, nome e peso dos itens
+saem do banco (`src/lib/carrinho-servidor.js`) — o corpo da requisição é editável por quem
+compra, e antes disso o preço de cada item vinha de lá. Opção inexistente (ou `entrega` sem UF)
+devolve 400 em vez de cobrar frete não calculado.
+
+**Efeito colateral desta troca:** pedido com produto que saiu do catálogo, ou com quantidade
+quebrada, agora é recusado com mensagem clara em vez de ser aceito com os dados do navegador.
+
+**Arquivos:** `src/lib/frete.js` (conta pura + leitura/escrita da configuração),
+`src/lib/carrinho-servidor.js` (confere o carrinho contra o banco),
+`src/app/api/frete/route.js`, `src/app/api/admin/frete/route.js`, `src/app/admin/frete/page.js`.
+
+**Banco:** `orders.shipping` (DECIMAL) e `orders.shipping_method` (`retirada`/`entrega`).
+O `total` já vem com o frete somado; o `shipping` fica à parte para mostrar "subtotal + frete"
+no pedido e conferir a cobrança meses depois. Migração: `npm run migrar-frete`
+(seguro rodar mais de uma vez; marca os pedidos antigos como `entrega` com frete 0).
+
+**Rede de segurança do deploy:** se o código subir antes da migração, o `saveOrder` percebe o
+`Unknown column`, avisa no log e grava o pedido sem as duas colunas. O total cobrado continua
+certo — só falta a quebra entre subtotal e entrega. Perder o detalhamento é ruim; perder a
+venda seria pior. Ainda assim: **rode a migração antes do deploy.**
+
+**Testes:** `npm run teste-frete` — 31 casos, banco falso em memória, não toca no banco real.
+
+**Não testado de ponta a ponta:** o caminho completo (checkout real → Mercado Pago → webhook)
+não foi exercitado com banco e MP de verdade. Vale conferir um pedido de teste com frete > 0
+antes de anunciar o recurso.
+
+---
+
 ## 8. 📱 WhatsApp
 
 ### Botão na página do produto
@@ -281,6 +334,7 @@ faz o servidor rejeitar toda notificação real com 401, o que é pior que não 
 | `/admin/produtos/[id]/editar` | Editar |
 | `/admin/pedidos` | Listar |
 | `/admin/pedidos/[id]` | Detalhe + status |
+| `/admin/frete` | Tabela de frete por região, peso e retirada |
 
 ---
 
@@ -296,6 +350,8 @@ faz o servidor rejeitar toda notificação real com 401, o que é pior que não 
 | `/api/pedidos/[id]` | GET, PATCH | admin | Detalhe/status |
 | `/api/upload` | POST | admin | Upload imagem |
 | `/api/webhooks/mercadopago` | POST, GET | HMAC | Confirmação automática de pagamento |
+| `/api/frete` | POST | — | Opções de entrega para um carrinho + UF |
+| `/api/admin/frete` | GET, PUT | admin | Ler/salvar a tabela de frete |
 
 ---
 
@@ -335,6 +391,10 @@ npm run build   # Build
 npm start       # Produção
 npm run seed    # Popula banco
 npm run init-db # Inicializa banco
+
+npm run migrar-frete   # Cria orders.shipping e orders.shipping_method
+npm run teste-frete    # Testes do cálculo de frete (sem banco)
+npm run teste-webhook  # Testes do webhook do Mercado Pago (sem banco)
 ```
 
 ---
@@ -359,7 +419,9 @@ npm run init-db # Inicializa banco
 ### Push bloqueado por secrets
 **Causa:** Senha Aiven detectada em commit.
 **Solução:** Autorizar via GitHub Secret Scanning.
-| total | DECIMAL(10,2) |
+| total | DECIMAL(10,2) — já inclui o frete |
+| shipping | DECIMAL(10,2) — quanto do total foi frete |
+| shipping_method | retirada / entrega |
 | status | aguardando_pagamento / pago / em_processamento / enviado / entregue / cancelado |
 | notes | |
 | created_at / updated_at | |

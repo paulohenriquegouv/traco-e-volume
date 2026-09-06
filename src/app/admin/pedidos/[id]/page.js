@@ -12,6 +12,10 @@ async function getOrder(id) {
   } catch { return null; }
 }
 
+// Como o pedido sai daqui. Pedido anterior ao frete nao tem o campo: vira
+// "Entrega" mesmo, que foi o que aconteceu com ele.
+const entregaLabels = { retirada: 'Retirada', entrega: 'Entrega' };
+
 const statusLabels = {
   aguardando_pagamento: 'Aguardando Pagamento',
   pago: 'Pago',
@@ -64,7 +68,17 @@ export default async function AdminPedidoDetailPage({ params }) {
                   <p className="font-bold">{Number(item.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                 </div>
               ))}
-              <div className="flex justify-between pt-3 font-bold text-lg">
+              <div className="flex justify-between pt-3 text-sm text-gray-600">
+                <span>Subtotal</span>
+                <span>{(Number(order.total) - Number(order.shipping || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Frete ({entregaLabels[order.shipping_method] || 'Entrega'})</span>
+                <span>{Number(order.shipping || 0) > 0
+                  ? Number(order.shipping).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                  : 'Grátis'}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-gray-100 font-bold text-lg">
                 <span>Total</span>
                 <span>{Number(order.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
               </div>
@@ -93,6 +107,13 @@ export default async function AdminPedidoDetailPage({ params }) {
               <p><span className="text-gray-500">Status:</span> <span className="font-medium">{order.payment_status}</span></p>
             </div>
           </div>
+
+          {order.shipping_method === 'retirada' && (
+            <div className="bg-white rounded-xl border border-gray-100 p-6">
+              <h3 className="font-bold text-gray-900 mb-2">Entrega</h3>
+              <p className="text-sm text-gray-700">O cliente vai retirar o pedido.</p>
+            </div>
+          )}
 
           {order.shipping_address?.address && (
             <div className="bg-white rounded-xl border border-gray-100 p-6">

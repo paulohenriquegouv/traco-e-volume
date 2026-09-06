@@ -154,7 +154,13 @@ async function enviarConfirmacaoDePedido({ para, nome, pedido, itens, endereco }
       <td style="padding:8px 0;border-bottom:1px solid ${CORES.linha};text-align:right;white-space:nowrap">${dinheiro(i.total)}</td>
     </tr>`).join('');
 
-  const blocoEndereco = endereco?.address ? `
+  // Pedido anterior ao frete vem sem os campos: frete zero e entrega, que foi o
+  // que aconteceu com ele de fato.
+  const frete = Number(pedido.shipping || 0);
+  const retirada = pedido.shipping_method === 'retirada';
+  const subtotal = Number(pedido.total) - frete;
+
+  const blocoEndereco = !retirada && endereco?.address ? `
     <p style="margin-top:24px"><strong>Entrega</strong><br>
     <span style="color:${CORES.suave};font-size:14px">
       ${endereco.address}${endereco.number ? `, ${endereco.number}` : ''}${endereco.complement ? ` — ${endereco.complement}` : ''}<br>
@@ -170,12 +176,22 @@ async function enviarConfirmacaoDePedido({ para, nome, pedido, itens, endereco }
     <table role="presentation" width="100%" style="margin-top:20px;font-size:14px" cellpadding="0" cellspacing="0">
       ${linhas}
       <tr>
-        <td style="padding:12px 0;font-weight:700">Total</td>
-        <td style="padding:12px 0;text-align:right;font-weight:700">${dinheiro(pedido.total)}</td>
+        <td style="padding:8px 0;color:${CORES.suave}">Subtotal</td>
+        <td style="padding:8px 0;text-align:right;color:${CORES.suave}">${dinheiro(subtotal)}</td>
+      </tr>
+      <tr>
+        <td style="padding:0 0 8px;color:${CORES.suave}">Frete${retirada ? ' (retirada)' : ''}</td>
+        <td style="padding:0 0 8px;text-align:right;color:${CORES.suave}">${frete > 0 ? dinheiro(frete) : 'Grátis'}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 0;font-weight:700;border-top:1px solid ${CORES.linha}">Total</td>
+        <td style="padding:12px 0;text-align:right;font-weight:700;border-top:1px solid ${CORES.linha}">${dinheiro(pedido.total)}</td>
       </tr>
     </table>
 
     ${blocoEndereco}
+    ${retirada ? `<p style="margin-top:24px"><strong>Retirada</strong><br>
+      <span style="color:${CORES.suave};font-size:14px">Você escolheu retirar este pedido. Avisamos assim que estiver pronto.</span></p>` : ''}
 
     <p style="margin:24px 0">${botao('Acompanhar pedido', `${loja}/pedido?id=${pedido.order_id}`)}</p>
     <p style="color:${CORES.suave};font-size:13px">

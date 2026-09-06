@@ -99,6 +99,12 @@ export default function PedidoPage() {
               </div>
             ))}
             <hr className="border-gray-100" />
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Frete{order.shipping_method === 'retirada' ? ' (retirada)' : ''}</span>
+              <span>{Number(order.shipping || 0) > 0
+                ? Number(order.shipping).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                : 'Grátis'}</span>
+            </div>
             <div className="flex justify-between font-bold text-lg">
               <span>Total</span>
               <span>{Number(order.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>

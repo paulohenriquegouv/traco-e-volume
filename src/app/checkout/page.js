@@ -26,6 +26,8 @@ const MOTIVO_RECUSA = {
   cc_rejected_duplicated_payment: 'Já existe um pagamento igual a este. Confira antes de tentar de novo.',
 };
 
+const dinheiro = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
 const METHODS = [
   { id: 'pix', label: 'Pix', desc: 'Pagamento instantâneo via QR Code.' },
   { id: 'card', label: 'Cartão de Crédito', desc: 'Parcele em até 12x.' },
@@ -85,6 +87,68 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // ---------- entrega ----------
+  const [entrega, setEntrega] = useState(null);   // resposta do /api/frete
+  const [opcaoFrete, setOpcaoFrete] = useState(''); // id escolhido pelo cliente
+  const [calculando, setCalculando] = useState(false);
+  const [erroFrete, setErroFrete] = useState('');
+
+  // O carrinho vira uma string para o efeito nao disparar a cada render: o array
+  // do contexto muda de identidade, o conteudo nao.
+  const chaveCarrinho = items.map(i => `${i.product_id}:${i.quantity}`).join(',');
+  const uf = f.state.trim().toUpperCase();
+
+  useEffect(() => {
+    if (!chaveCarrinho) return;
+    let vivo = true;
+    setCalculando(true);
+    // Um respiro antes de chamar: a UF chega junto com o resto do endereco
+    // quando o CEP e encontrado, e sem isso cada tecla no campo Estado viraria
+    // uma requisicao.
+    const t = setTimeout(() => {
+      fetch('/api/frete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uf,
+          items: chaveCarrinho.split(',').map(par => {
+            const [product_id, quantity] = par.split(':');
+            return { product_id: Number(product_id), quantity: Number(quantity) };
+          }),
+        }),
+      })
+        .then(r => r.json())
+        .then(d => {
+          if (!vivo) return;
+          // Erro aqui quase sempre e item que saiu do catalogo. Sem mostrar, o
+          // cliente ficaria vendo "informe o CEP" para sempre, e o pedido seria
+          // recusado no fim sem que ele soubesse por que.
+          if (d.error) { setErroFrete(d.error); setEntrega(null); return; }
+          setErroFrete('');
+          setEntrega(d);
+          setOpcaoFrete(atual => {
+            const ids = (d.opcoes || []).map(o => o.id);
+            // Escolha do cliente manda, desde que continue existindo. So quando
+            // ela some (mudou de UF, retirada desligada) e que voltamos ao
+            // padrao: entrega no endereco, que e o que quem digitou um CEP quer.
+            if (atual && ids.includes(atual)) return atual;
+            return ids.includes('entrega') ? 'entrega' : (ids[0] || '');
+          });
+        })
+        .catch(() => { if (vivo) setErroFrete('Não foi possível calcular o frete agora. Tente de novo em instantes.'); })
+        .finally(() => { if (vivo) setCalculando(false); });
+    }, 400);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [chaveCarrinho, uf]);
+
+  const opcoes = entrega?.opcoes || [];
+  const escolhida = opcoes.find(o => o.id === opcaoFrete) || null;
+  const valorFrete = escolhida ? Number(escolhida.preco) : 0;
+  // O subtotal que vale e o do servidor (precos recalculados no banco); o do
+  // carrinho serve so enquanto a primeira resposta nao chega.
+  const subtotal = entrega ? Number(entrega.subtotal) : total;
+  const totalComFrete = Math.round((subtotal + valorFrete) * 100) / 100;
+
   if (items.length === 0) {
     return (
       <div className="container-custom py-20 text-center">
@@ -127,12 +191,13 @@ export default function CheckoutPage() {
   };
 
   const dadosPessoaisOk = f.name.trim() && f.email.trim();
+  const entregaOk = Boolean(escolhida);
 
   // Usado pelos dois fluxos: Pix/boleto pelo botão, cartão pelo brick (que manda o token)
   const enviarPedido = async (extra = {}) => {
     setError('');
     const res = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity })), customer_name: f.name, customer_email: f.email, customer_phone: f.phone, customer_document: f.document, shipping_address: { address: f.address, number: f.number, complement: f.complement, neighborhood: f.neighborhood, city: f.city, state: f.state, zip: f.zip }, payment_method: method, shipping: 0, ...extra }),
+      body: JSON.stringify({ items: items.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity })), customer_name: f.name, customer_email: f.email, customer_phone: f.phone, customer_document: f.document, shipping_address: { address: f.address, number: f.number, complement: f.complement, neighborhood: f.neighborhood, city: f.city, state: f.state, zip: f.zip }, payment_method: method, shipping_option: opcaoFrete, ...extra }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erro no pagamento');
@@ -157,6 +222,7 @@ export default function CheckoutPage() {
     if (method === 'card') return; // no cartão quem envia é o brick
     setLoading(true); setError('');
     if (!dadosPessoaisOk) { setError('Nome e e-mail são obrigatórios.'); setLoading(false); return; }
+    if (!entregaOk) { setError('Escolha como quer receber o pedido.'); setLoading(false); return; }
     try {
       await enviarPedido();
     } catch (err) { setError(err.message); } finally { setLoading(false); }
@@ -167,6 +233,10 @@ export default function CheckoutPage() {
     if (!dadosPessoaisOk) {
       setError('Preencha nome e e-mail antes de pagar.');
       throw new Error('dados pessoais incompletos');
+    }
+    if (!entregaOk) {
+      setError('Escolha como quer receber o pedido antes de pagar.');
+      throw new Error('entrega nao escolhida');
     }
     try {
       await enviarPedido(dadosCartao);
@@ -286,6 +356,72 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
             </div>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <h3 className="font-bold text-gray-900 mb-4">Entrega</h3>
+
+            {calculando && !opcoes.length && (
+              <p className="text-sm text-gray-400"><span className="spinner mr-2" aria-hidden="true" />Calculando...</p>
+            )}
+
+            {erroFrete && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">{erroFrete}</p>
+            )}
+
+            {!calculando && !opcoes.length && !erroFrete && (
+              <p className="text-sm text-gray-500">
+                Informe o CEP acima para ver as formas de entrega.
+              </p>
+            )}
+
+            <div className="space-y-3">
+              {opcoes.map(o => (
+                <label
+                  key={o.id}
+                  className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer ${opcaoFrete === o.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}
+                >
+                  <input
+                    type="radio"
+                    name="entrega"
+                    value={o.id}
+                    checked={opcaoFrete === o.id}
+                    onChange={() => setOpcaoFrete(o.id)}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="font-medium text-gray-900">{o.nome}</p>
+                      <p className="font-medium text-gray-900 shrink-0">
+                        {o.preco > 0 ? dinheiro(o.preco) : <span className="text-green-600">Grátis</span>}
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      {o.detalhe}
+                      {o.detalhe && o.prazo_dias > 0 ? ' · ' : ''}
+                      {o.prazo_dias > 0 ? `em até ${o.prazo_dias} ${o.prazo_dias === 1 ? 'dia útil' : 'dias úteis'}` : ''}
+                    </p>
+                    {/* Frete que caiu para zero pelo valor da compra: mostrar o
+                        preco cortado deixa claro o que foi economizado */}
+                    {o.id === 'entrega' && o.preco === 0 && o.preco_cheio > 0 && (
+                      <p className="text-sm text-green-600">
+                        Frete grátis nesta compra <span className="text-gray-400 line-through">{dinheiro(o.preco_cheio)}</span>
+                      </p>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {entrega?.falta_para_gratis > 0 && (
+              <p className="text-sm text-gray-500 mt-3">
+                Faltam <strong className="text-gray-900">{dinheiro(entrega.falta_para_gratis)}</strong> para o frete grátis.
+              </p>
+            )}
+
+            {calculando && opcoes.length > 0 && (
+              <p className="text-xs text-gray-400 mt-3"><span className="spinner mr-2" aria-hidden="true" />Atualizando o frete...</p>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-4">Forma de Pagamento</h3>
             <div className="space-y-3">
               {METHODS.map(m => (
@@ -318,7 +454,7 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
                 Formulário seguro do Mercado Pago — os dados do cartão não passam pela nossa loja.
               </p>
               {dadosPessoaisOk ? (
-                <CardPaymentBrick amount={total} email={f.email} onPagar={handleCartao} />
+                <CardPaymentBrick amount={totalComFrete} email={f.email} onPagar={handleCartao} />
               ) : (
                 <div className="bg-amber-50 text-amber-700 p-4 rounded-lg text-sm">
                   Preencha nome e e-mail acima para liberar o pagamento com cartão.
@@ -356,9 +492,22 @@ const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 f
                 </div>
               ))}
               <hr className="border-gray-100" />
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Subtotal</span>
+                <span className="font-medium text-gray-900">{dinheiro(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Frete{escolhida ? ` (${escolhida.nome})` : ''}</span>
+                <span className="font-medium text-gray-900">
+                  {!escolhida
+                    ? <span className="text-gray-400 font-normal">informe o CEP</span>
+                    : valorFrete > 0 ? dinheiro(valorFrete) : <span className="text-green-600">Grátis</span>}
+                </span>
+              </div>
+              <hr className="border-gray-100" />
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span>{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                <span>{dinheiro(totalComFrete)}</span>
               </div>
             </div>
           </div>

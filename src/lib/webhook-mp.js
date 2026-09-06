@@ -68,7 +68,13 @@ async function avisarPagamentoConfirmado(db, pedido) {
     const r = await enviarConfirmacaoDePedido({
       para: pedido.customer_email,
       nome: pedido.customer_name || 'cliente',
-      pedido: { order_id: pedido.order_id, total: pedido.total },
+      pedido: {
+        order_id: pedido.order_id,
+        total: pedido.total,
+        // Sem estes dois o e-mail mostraria o total sem dizer quanto foi frete
+        shipping: pedido.shipping,
+        shipping_method: pedido.shipping_method,
+      },
       itens,
       endereco,
     });

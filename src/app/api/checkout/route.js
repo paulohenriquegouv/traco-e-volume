@@ -3,6 +3,8 @@ import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { getDb } from '@/lib/db';
 import { generateOrderId } from '@/lib/auth';
 import { clienteAtual } from '@/lib/customer-auth';
+import { conferirCarrinho } from '@/lib/carrinho-servidor';
+import { lerConfig, pesoDoPedido, precoDaOpcao } from '@/lib/frete';
 
 // CPF/CNPJ chega formatado do formulario; o MP so aceita digitos
 function onlyDigits(v) {
@@ -42,14 +44,41 @@ function documentoValido(doc) {
   return doc.length === 11 ? cpfValido(doc) : doc.length === 14 ? cnpjValido(doc) : false;
 }
 
-async function saveOrder(db, orderId, body, address, method, paymentId, total, clienteId = null) {
+// Colunas que so existem depois de `npm run migrar-frete`.
+const COLUNAS_FRETE = ', shipping, shipping_method';
+
+function colunaAusente(e) {
+  return e?.code === 'ER_BAD_FIELD_ERROR' || /Unknown column/i.test(String(e?.message || ''));
+}
+
+async function saveOrder(db, orderId, body, address, method, paymentId, total, clienteId = null, entrega = { preco: 0, opcao: '' }) {
   const { customer_name, customer_email, customer_phone, customer_document } = body;
   // customer_id fica nulo na compra sem cadastro — e o pedido e adotado depois,
   // quando a pessoa criar conta com o mesmo e-mail e confirma-lo.
-  await db.prepare('INSERT INTO orders (order_id, customer_id, customer_name, customer_email, customer_phone, customer_document, shipping_address, payment_method, payment_id, payment_status, total, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+  // total ja vem com o frete somado; shipping fica a parte para o pedido poder
+  // mostrar "subtotal + frete" e para conferir a cobranca depois.
+  const comuns = [
     orderId, clienteId, customer_name, customer_email, customer_phone || '', customer_document || '',
-    JSON.stringify(address), method, paymentId, 'pending', total, 'aguardando_pagamento'
-  );
+    JSON.stringify(address), method, paymentId, 'pending', total,
+  ];
+  const inserir = (colunas, valores) => db.prepare(
+    `INSERT INTO orders (order_id, customer_id, customer_name, customer_email, customer_phone, customer_document, shipping_address, payment_method, payment_id, payment_status, total${colunas}, status) ` +
+    `VALUES (${valores.map(() => '?').join(', ')}, ?)`
+  ).run(...valores, 'aguardando_pagamento');
+
+  try {
+    await inserir(COLUNAS_FRETE, [...comuns, entrega.preco, entrega.opcao]);
+  } catch (e) {
+    if (!colunaAusente(e)) throw e;
+    // Deploy subiu antes de `npm run migrar-frete`. Perder o detalhamento do
+    // frete e ruim; perder a venda e pior — o total cobrado ja esta certo, so
+    // fica sem a quebra entre subtotal e entrega.
+    console.error(
+      '[checkout] orders.shipping nao existe: pedido salvo sem o detalhe do frete. ' +
+      'Rode `npm run migrar-frete` no banco de producao.'
+    );
+    await inserir('', comuns);
+  }
 }
 
 async function saveOrderItems(db, orderId, items) {
@@ -72,21 +101,46 @@ export async function POST(request) {
     const clienteLogado = await clienteAtual(request);
     const clienteId = clienteLogado?.id || null;
 
+    // Preco e peso saem do banco, nunca do que o navegador mandou. O corpo da
+    // requisicao e editavel por quem compra: aceitar o preco dali seria deixar
+    // o cliente escolher quanto pagar.
+    const carrinho = await conferirCarrinho(db, body.items);
+    if (!carrinho.ok) return NextResponse.json({ error: carrinho.erro }, { status: 400 });
+
+    const endereco = body.shipping_address || {};
+    const configFrete = await lerConfig(db);
+    const opcaoFrete = String(body.shipping_option || '');
+    const frete = precoDaOpcao({
+      config: configFrete,
+      id: opcaoFrete,
+      uf: endereco.state,
+      subtotal: carrinho.subtotal,
+      peso_g: pesoDoPedido(carrinho.itens, configFrete),
+    });
+    // null = opcao inexistente para este endereco (ex.: entrega sem UF). Recusar
+    // e melhor que cobrar um frete que ninguem calculou.
+    if (frete === null) {
+      return NextResponse.json({
+        error: 'Escolha uma forma de entrega válida. Se for entrega no endereço, informe o CEP.',
+      }, { status: 400 });
+    }
+
     const orderId = generateOrderId();
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
     if (!accessToken) return NextResponse.json({ error: 'MP não configurado' }, { status: 500 });
 
     const client = new MercadoPagoConfig({ accessToken });
     const method = body.payment_method || 'pix';
-    const total = body.items.reduce((s, i) => s + i.price * i.quantity, 0) + (body.shipping || 0);
+    const entrega = { preco: frete, opcao: opcaoFrete };
+    const total = Math.round((carrinho.subtotal + frete) * 100) / 100;
     const partesNome = body.customer_name.trim().split(/\s+/);
     // O MP recusa sobrenome vazio no boleto; repetir o primeiro nome e o fallback usual
     const payer = { email: body.customer_email, first_name: partesNome[0], last_name: partesNome.slice(1).join(' ') || partesNome[0] };
 
     if (method === 'pix') {
       const r = await new Payment(client).create({ body: { transaction_amount: total, description: 'Pedido ' + orderId + ' - Traço & Volume', payment_method_id: 'pix', payer, external_reference: orderId, notification_url: process.env.NEXT_PUBLIC_SITE_URL + '/api/webhooks/mercadopago' } });
-      await saveOrder(db, orderId, body, body.shipping_address || {}, 'pix', r.id, total, clienteId);
-      await saveOrderItems(db, orderId, body.items);
+      await saveOrder(db, orderId, body, endereco, 'pix', r.id, total, clienteId, entrega);
+      await saveOrderItems(db, orderId, carrinho.itens);
       return NextResponse.json({ success: true, order_id: orderId, payment_id: r.id, payment_method: 'pix', qr_code: r.point_of_interaction?.transaction_data?.qr_code || '', qr_code_base64: r.point_of_interaction?.transaction_data?.qr_code_base64 || '', ticket_url: r.point_of_interaction?.transaction_data?.ticket_url || '', status: r.status });
     }
 
@@ -96,7 +150,7 @@ export async function POST(request) {
       if (!documentoValido(doc)) {
         return NextResponse.json({ error: 'Para pagar com boleto, informe um CPF ou CNPJ válido.' }, { status: 400 });
       }
-      const end = body.shipping_address || {};
+      const end = endereco;
       const cep = onlyDigits(end.zip);
       if (cep.length !== 8 || !end.address?.trim() || !end.city?.trim() || !end.state?.trim()) {
         return NextResponse.json({ error: 'Para pagar com boleto, preencha endereço, cidade, estado e CEP.' }, { status: 400 });
@@ -114,8 +168,8 @@ export async function POST(request) {
         federal_unit: end.state.toUpperCase().slice(0, 2),
       };
       const r = await new Payment(client).create({ body: { transaction_amount: total, description: 'Pedido ' + orderId + ' - Traço & Volume', payment_method_id: 'bolbradesco', payer, external_reference: orderId, notification_url: process.env.NEXT_PUBLIC_SITE_URL + '/api/webhooks/mercadopago' } });
-      await saveOrder(db, orderId, body, body.shipping_address || {}, 'boleto', r.id, total, clienteId);
-      await saveOrderItems(db, orderId, body.items);
+      await saveOrder(db, orderId, body, endereco, 'boleto', r.id, total, clienteId, entrega);
+      await saveOrderItems(db, orderId, carrinho.itens);
       return NextResponse.json({ success: true, order_id: orderId, payment_id: r.id, payment_method: 'boleto', boleto_url: r.transaction_details?.external_resource_url || '', boleto_barcode: r.barcode?.content || '', status: r.status });
     }
 
@@ -129,9 +183,9 @@ export async function POST(request) {
       const recusado = r.status === 'rejected' || r.status === 'cancelled';
       const statusPedido = r.status === 'approved' ? 'pago' : recusado ? 'cancelado' : 'aguardando_pagamento';
       const statusPagamento = r.status === 'approved' ? 'approved' : recusado ? r.status : 'pending';
-      await saveOrder(db, orderId, body, body.shipping_address || {}, 'card', r.id, total, clienteId);
+      await saveOrder(db, orderId, body, endereco, 'card', r.id, total, clienteId, entrega);
       await db.prepare('UPDATE orders SET payment_status = ?, status = ? WHERE order_id = ?').run(statusPagamento, statusPedido, orderId);
-      await saveOrderItems(db, orderId, body.items);
+      await saveOrderItems(db, orderId, carrinho.itens);
       return NextResponse.json({ success: true, order_id: orderId, payment_id: r.id, payment_method: 'card', status: r.status, status_detail: r.status_detail, installments: r.installments });
     }
 
