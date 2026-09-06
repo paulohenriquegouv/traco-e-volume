@@ -51,6 +51,25 @@ export default function PainelFrete() {
     }));
   };
 
+  const mudarEmbalagem = (i, campo, valor) => {
+    setConfig(c => ({
+      ...c,
+      embalagens: c.embalagens.map((e, j) => (j === i ? { ...e, [campo]: valor } : e)),
+    }));
+  };
+
+  const adicionarEmbalagem = () => {
+    setConfig(c => ({
+      ...c,
+      // id vazio: quem batiza é o servidor, a partir do nome, na hora de salvar.
+      embalagens: [...(c.embalagens || []), { id: '', nome: '', length_cm: '', width_cm: '', height_cm: '', peso_g: '' }],
+    }));
+  };
+
+  const removerEmbalagem = (i) => {
+    setConfig(c => ({ ...c, embalagens: c.embalagens.filter((_, j) => j !== i) }));
+  };
+
   const aplicarSugestao = () => {
     setConfig(c => ({
       ...c,
@@ -169,6 +188,61 @@ export default function PainelFrete() {
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <h2 className="font-bold text-gray-900 mb-1">Embalagens</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            As caixas que você usa de verdade. O que a transportadora mede é a caixa, não a peça:
+            um vaso de 12 cm dentro de uma caixa de 20 cm viaja como 20 cm. No cadastro do produto
+            você escolhe qual caixa ele usa; sem escolher, valem as medidas do próprio produto.
+          </p>
+
+          {(config.embalagens || []).length === 0 && (
+            <p className="text-sm text-gray-400 mb-4">
+              Nenhuma caixa cadastrada — o frete usa as medidas de cada produto.
+            </p>
+          )}
+
+          <div className="space-y-3">
+            {(config.embalagens || []).map((e, i) => (
+              <div key={i} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-start">
+                <div className="col-span-2 md:col-span-4">
+                  <input type="text" value={e.nome} placeholder="Nome (ex: Caixa média)"
+                    onChange={ev => mudarEmbalagem(i, 'nome', ev.target.value)} className={ic} />
+                  {i === 0 && <p className="text-xs text-gray-400 mt-1">Nome</p>}
+                </div>
+                {[['length_cm', 'Comp.'], ['width_cm', 'Larg.'], ['height_cm', 'Alt.']].map(([campo, rotulo]) => (
+                  <div key={campo} className="md:col-span-2">
+                    <input type="number" min="0" step="0.1" value={e[campo]} placeholder={rotulo}
+                      onChange={ev => mudarEmbalagem(i, campo, ev.target.value)} className={ic} />
+                    {i === 0 && <p className="text-xs text-gray-400 mt-1">{rotulo} (cm)</p>}
+                  </div>
+                ))}
+                <div className="md:col-span-1">
+                  <input type="number" min="0" step="1" value={e.peso_g} placeholder="Peso"
+                    onChange={ev => mudarEmbalagem(i, 'peso_g', ev.target.value)} className={ic} />
+                  {i === 0 && <p className="text-xs text-gray-400 mt-1">Vazia (g)</p>}
+                </div>
+                <div className="md:col-span-1">
+                  <button type="button" onClick={() => removerEmbalagem(i)}
+                    className="btn w-full px-2 py-2 text-sm text-gray-400 hover:text-red-600" aria-label={`Remover ${e.nome || 'caixa'}`}>
+                    Remover
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button type="button" onClick={adicionarEmbalagem}
+            className="btn mt-4 text-sm font-medium text-primary-700 hover:text-primary-800 underline">
+            Adicionar caixa
+          </button>
+          <p className="text-xs text-gray-400 mt-3">
+            Linha sem nome ou sem as três medidas é descartada ao salvar — caixa pela metade
+            cobraria frete errado calada. O peso é o da caixa <strong>vazia</strong>: papelão e
+            plástico-bolha pesam.
+          </p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-6">

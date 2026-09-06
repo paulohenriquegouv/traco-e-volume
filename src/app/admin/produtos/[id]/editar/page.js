@@ -10,9 +10,17 @@ export default function EditarProdutoPage() {
   const [f, setF] = useState({
     name: '', slug: '', description: '', short_description: '',
     price: '', compare_price: '', category: '', material: '',
-    weight: '', length_cm: '', width_cm: '', height_cm: '', stock: '0', featured: false, active: true
+    weight: '', length_cm: '', width_cm: '', height_cm: '', embalagem_id: '', stock: '0', featured: false, active: true
   });
   const [images, setImages] = useState([]);
+  // As caixas vem da tabela de frete: e la que elas sao cadastradas.
+  const [embalagens, setEmbalagens] = useState([]);
+  useEffect(() => {
+    fetch('/api/admin/frete')
+      .then(r => r.json())
+      .then(d => setEmbalagens(d.config?.embalagens || []))
+      .catch(() => setEmbalagens([]));
+  }, []);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState('');
@@ -34,6 +42,7 @@ export default function EditarProdutoPage() {
           length_cm: p.length_cm ? String(p.length_cm) : '',
           width_cm: p.width_cm ? String(p.width_cm) : '',
           height_cm: p.height_cm ? String(p.height_cm) : '',
+          embalagem_id: p.embalagem_id || '',
           dimensions: p.dimensions || '',
           stock: String(p.stock || 0),
           featured: !!p.featured,
@@ -205,6 +214,20 @@ export default function EditarProdutoPage() {
               </div>
               <p className="text-xs text-gray-400 mt-2">
                 Usado no cálculo do frete. Sem as três medidas, o pedido é cobrado só pelo peso.
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Embalagem</label>
+              <select value={f.embalagem_id} onChange={e => setF({...f, embalagem_id: e.target.value})} className={ic}>
+                <option value="">Usar as medidas do produto</option>
+                {embalagens.map(e => (
+                  <option key={e.id} value={e.id}>
+                    {e.nome} — {e.length_cm} x {e.width_cm} x {e.height_cm} cm
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                A caixa em que este produto viaja. Cadastre as caixas em Configurações → Entrega.
               </p>
             </div>
           </div>

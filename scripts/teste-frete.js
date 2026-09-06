@@ -6,6 +6,7 @@ const {
   mesclarConfig, regiaoDaUf, pesoDoPedido, precoDaEntrega,
   calcularOpcoes, precoDaOpcao, CONFIG_PADRAO,
   volumeDoPedido, pesoCubado, pesoParaFrete,
+  normalizarEmbalagens, embalagemDoItem,
 } = require('../src/lib/frete');
 const { lerTexto, medidas, volumeCm3, textoParaGravar } = require('../src/lib/dimensoes');
 const { conferirCarrinho } = require('../src/lib/carrinho-servidor');
@@ -348,6 +349,86 @@ teste('o volume vem do banco e muda a faixa cobrada', async () => {
   // sem cubagem o mesmo pedido nao passa do peso base e paga so a base
   const semCubagem = { ...cfg, divisor_cubagem: 0 };
   igual(precoDaOpcao({ config: semCubagem, id: 'entrega', uf: 'PA', subtotal: r.subtotal, peso_g: pesoParaFrete(r.itens, semCubagem) }), 20);
+});
+
+
+// ---------- embalagens ----------
+
+const CAIXAS = {
+  ...TABELA,
+  divisor_cubagem: 6000,
+  embalagens: [
+    { id: 'media', nome: 'Caixa média', length_cm: 30, width_cm: 25, height_cm: 20, peso_g: 150 },
+    { id: 'pequena', nome: 'Caixa pequena', length_cm: 15, width_cm: 12, height_cm: 10, peso_g: 60 },
+  ],
+};
+
+teste('caixa pela metade não vira embalagem', () => {
+  const e = normalizarEmbalagens([
+    { nome: 'Boa', length_cm: 10, width_cm: 10, height_cm: 10 },
+    { nome: 'Sem altura', length_cm: 10, width_cm: 10 },
+    { length_cm: 5, width_cm: 5, height_cm: 5 },
+    'nem objeto',
+  ]);
+  igual(e.map(x => x.nome), ['Boa']);
+  igual(e[0].peso_g, 0, 'peso ausente vira zero, não NaN');
+});
+
+teste('caixa sem id ganha um a partir do nome', () => {
+  igual(normalizarEmbalagens([{ nome: 'Caixa Média 2', length_cm: 1, width_cm: 1, height_cm: 1 }])[0].id, 'caixa-media-2');
+});
+
+teste('id repetido não cria duas caixas', () => {
+  const e = normalizarEmbalagens([
+    { id: 'a', nome: 'Uma', length_cm: 1, width_cm: 1, height_cm: 1 },
+    { id: 'a', nome: 'Outra', length_cm: 2, width_cm: 2, height_cm: 2 },
+  ]);
+  igual(e.length, 1);
+  igual(e[0].nome, 'Uma');
+});
+
+teste('lista inválida não derruba a configuração', () => {
+  igual(mesclarConfig({ embalagens: 'isto não é lista' }).embalagens, []);
+  igual(mesclarConfig(null).embalagens, []);
+});
+
+teste('a caixa escolhida é encontrada pelo id', () => {
+  igual(embalagemDoItem({ embalagem_id: 'media' }, CAIXAS).nome, 'Caixa média');
+  igual(embalagemDoItem({ embalagem_id: 'nao-existe' }, CAIXAS), null);
+  igual(embalagemDoItem({ embalagem_id: '' }, CAIXAS), null);
+});
+
+teste('a caixa manda no volume, não a peça', () => {
+  // peca de 1000 cm3 dentro de uma caixa de 15000
+  const itens = [{ peso_g: 400, volume_cm3: 1000, embalagem_id: 'media', quantity: 1 }];
+  igual(volumeDoPedido(itens, CAIXAS), 15000);
+  igual(pesoParaFrete(itens, CAIXAS), 2500, 'cubado pela caixa');
+});
+
+teste('sem caixa escolhida valem as medidas do produto', () => {
+  const itens = [{ peso_g: 400, volume_cm3: 1000, quantity: 1 }];
+  igual(volumeDoPedido(itens, CAIXAS), 1000);
+});
+
+teste('caixa que nao existe mais cai nas medidas do produto', () => {
+  const itens = [{ peso_g: 400, volume_cm3: 1000, embalagem_id: 'apagada', quantity: 1 }];
+  igual(volumeDoPedido(itens, CAIXAS), 1000, 'apagar a caixa não pode zerar o volume');
+});
+
+teste('o peso da caixa vazia entra na conta', () => {
+  const itens = [{ peso_g: 400, embalagem_id: 'pequena', quantity: 1 }];
+  igual(pesoDoPedido(itens, CAIXAS), 460);
+});
+
+teste('cada unidade leva a sua caixa', () => {
+  const itens = [{ peso_g: 400, embalagem_id: 'pequena', quantity: 3 }];
+  igual(pesoDoPedido(itens, CAIXAS), (400 + 60) * 3);
+  igual(volumeDoPedido(itens, CAIXAS), 15 * 12 * 10 * 3);
+});
+
+teste('produto sem peso usa o padrão e ainda soma a caixa', () => {
+  const itens = [{ peso_g: 0, embalagem_id: 'pequena', quantity: 1 }];
+  igual(pesoDoPedido(itens, CAIXAS), 300 + 60);
 });
 
 (async () => {

@@ -1,6 +1,6 @@
 /**
- * Prepara o banco para a cotação de frete por volume: comprimento, largura e
- * altura do produto em números, não em texto livre.
+ * Prepara o banco para o frete por volume: as medidas do produto em números (não
+ * em texto livre) e a caixa que ele usa.
  *
  *   npm run migrar-dimensoes
  *
@@ -63,6 +63,16 @@ async function main() {
       await conn.query(`ALTER TABLE products ADD COLUMN ${nome} DECIMAL(10,2) DEFAULT NULL`);
       console.log(`OK  products.${nome}`);
     }
+  }
+
+  // Qual caixa este produto usa. Guarda o id da embalagem cadastrada em
+  // /admin/configuracoes (aba Entrega); vazio significa "usa as medidas do
+  // próprio produto", que é como era antes das caixas existirem.
+  if (await colunaExiste(conn, 'products', 'embalagem_id')) {
+    console.log('--  products.embalagem_id já existe');
+  } else {
+    await conn.query("ALTER TABLE products ADD COLUMN embalagem_id VARCHAR(60) NOT NULL DEFAULT ''");
+    console.log('OK  products.embalagem_id');
   }
 
   const [produtos] = await conn.query(

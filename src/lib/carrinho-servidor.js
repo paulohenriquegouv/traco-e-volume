@@ -64,7 +64,7 @@ async function conferirCarrinho(db, recebidos) {
   const marcadores = ids.map(() => '?').join(', ');
   const produtos = await db
     .prepare(
-      `SELECT id, name, price, weight, length_cm, width_cm, height_cm, active ` +
+      `SELECT id, name, price, weight, length_cm, width_cm, height_cm, embalagem_id, active ` +
       `FROM products WHERE id IN (${marcadores})`
     )
     .all(...ids);
@@ -97,6 +97,9 @@ async function conferirCarrinho(db, recebidos) {
       // Zero em produto sem as três medidas: o frete cai para o peso, em vez de
       // inventar uma caixa que ninguém mediu.
       volume_cm3: volumeCm3(p),
+      // Qual caixa este produto usa; o cálculo do frete resolve o resto. Vazio
+      // significa "usa as medidas do próprio produto".
+      embalagem_id: String(p.embalagem_id || ''),
     });
     subtotal = Math.round((subtotal + total) * 100) / 100;
   }

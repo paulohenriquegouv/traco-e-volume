@@ -61,7 +61,7 @@ export async function PUT(request, { params }) {
         name = ?, slug = ?, description = ?, short_description = ?,
         price = ?, compare_price = ?, images = ?, category = ?,
         tags = ?, weight = ?, dimensions = ?,
-        length_cm = ?, width_cm = ?, height_cm = ?, material = ?,
+        length_cm = ?, width_cm = ?, height_cm = ?, embalagem_id = ?, material = ?,
         colors = ?, stock = ?, featured = ?, active = ?
       WHERE id = ?
     `).run(
@@ -87,6 +87,7 @@ export async function PUT(request, { params }) {
       numeroCm(data.length_cm ?? existing.length_cm),
       numeroCm(data.width_cm ?? existing.width_cm),
       numeroCm(data.height_cm ?? existing.height_cm),
+      String(data.embalagem_id ?? existing.embalagem_id ?? ''),
       data.material ?? existing.material,
       JSON.stringify(data.colors ?? JSON.parse(existing.colors || '[]')),
       data.stock ?? existing.stock,

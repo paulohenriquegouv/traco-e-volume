@@ -89,8 +89,8 @@ export async function POST(request) {
     }
 
     const result = await db.prepare(`
-      INSERT INTO products (name, slug, description, short_description, price, compare_price, images, category, tags, weight, dimensions, length_cm, width_cm, height_cm, material, colors, stock, featured, active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (name, slug, description, short_description, price, compare_price, images, category, tags, weight, dimensions, length_cm, width_cm, height_cm, embalagem_id, material, colors, stock, featured, active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.name,
       slug,
@@ -108,6 +108,7 @@ export async function POST(request) {
       numeroCm(data.length_cm),
       numeroCm(data.width_cm),
       numeroCm(data.height_cm),
+      String(data.embalagem_id || ''),
       data.material || '',
       JSON.stringify(data.colors || []),
       data.stock || 0,

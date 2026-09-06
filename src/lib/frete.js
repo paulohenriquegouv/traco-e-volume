@@ -54,6 +54,16 @@ const CONFIG_PADRAO = {
   regioes: Object.fromEntries(
     Object.keys(REGIOES).map(k => [k, { base: 0, kg_extra: 0, prazo_dias: 0 }])
   ),
+  // Caixas que a loja usa de verdade. O que a transportadora mede é a caixa, não
+  // a peça: um vaso de 12 cm dentro de uma caixa de 20 cm viaja como 20 cm.
+  //
+  // Cada item é { id, nome, length_cm, width_cm, height_cm, peso_g }, com peso_g
+  // sendo o peso da caixa VAZIA — papelão e plástico-bolha pesam, e esquecer
+  // disso é subcobrar em todo pedido.
+  //
+  // Nasce vazia: sem caixa cadastrada, o frete usa as medidas do próprio
+  // produto, que é como funcionava antes.
+  embalagens: [],
 };
 
 const CHAVE_SETTING = 'frete';
@@ -65,6 +75,47 @@ function numero(v, padrao = 0) {
 
 function dinheiro(v) {
   return Math.round(numero(v) * 100) / 100;
+}
+
+/**
+ * Limpa a lista de caixas vinda do banco (ou do formulário).
+ *
+ * Linha sem nome ou sem as três medidas é descartada em vez de virar uma caixa
+ * de volume zero: caixa pela metade cobraria frete errado calada. O id é o que
+ * o produto guarda, então nunca é inventado aqui — linha sem id ganha um a
+ * partir do nome, e id repetido perde a segunda ocorrência.
+ */
+function normalizarEmbalagens(bruto) {
+  if (!Array.isArray(bruto)) return [];
+  const vistos = new Set();
+  const saida = [];
+  for (const e of bruto) {
+    if (!e || typeof e !== 'object') continue;
+    const nome = String(e.nome || '').trim();
+    const c = numero(e.length_cm), l = numero(e.width_cm), a = numero(e.height_cm);
+    if (!nome || !(c > 0) || !(l > 0) || !(a > 0)) continue;
+    const id = String(e.id || '').trim() || nome
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')  // "Média" -> "Media", nao "M-dia"
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    if (!id || vistos.has(id)) continue;
+    vistos.add(id);
+    saida.push({
+      id,
+      nome,
+      length_cm: Math.round(c * 10) / 10,
+      width_cm: Math.round(l * 10) / 10,
+      height_cm: Math.round(a * 10) / 10,
+      peso_g: Math.round(numero(e.peso_g)),
+    });
+  }
+  return saida;
+}
+
+/** A caixa escolhida no cadastro do produto, ou null quando não há. */
+function embalagemDoItem(item, config) {
+  const id = String(item?.embalagem_id || '').trim();
+  if (!id) return null;
+  return mesclarConfig(config).embalagens.find(e => e.id === id) || null;
 }
 
 /**
@@ -91,6 +142,7 @@ function mesclarConfig(bruto) {
       endereco: String(retirada.endereco || ''),
       prazo_dias: Math.round(numero(retirada.prazo_dias, CONFIG_PADRAO.retirada.prazo_dias)),
     },
+    embalagens: normalizarEmbalagens(c.embalagens),
     regioes: Object.fromEntries(
       Object.keys(REGIOES).map(k => {
         const r = regioes[k] && typeof regioes[k] === 'object' ? regioes[k] : {};
@@ -108,21 +160,43 @@ function regiaoDaUf(uf) {
   return UF_PARA_REGIAO[String(uf || '').trim().toUpperCase()] || null;
 }
 
-/** Soma o peso do carrinho. `itens`: [{ peso_g, quantity }] */
+/**
+ * Soma o peso do carrinho. `itens`: [{ peso_g, embalagem_id, quantity }]
+ *
+ * A caixa vazia entra no peso: papelão e plástico-bolha pesam, e esquecer disso
+ * subcobra em todo pedido.
+ */
 function pesoDoPedido(itens, config) {
   const c = mesclarConfig(config);
   return (itens || []).reduce((soma, i) => {
     const qtd = Math.max(1, Math.round(numero(i.quantity, 1)));
     const peso = numero(i.peso_g, 0) || c.peso_padrao_g;
-    return soma + peso * qtd;
+    const caixa = embalagemDoItem(i, c);
+    return soma + (peso + (caixa ? caixa.peso_g : 0)) * qtd;
   }, 0);
 }
 
-/** Soma o volume do carrinho, em cm³. Item sem medida cadastrada entra com zero. */
-function volumeDoPedido(itens) {
+/**
+ * Soma o volume do carrinho, em cm³.
+ *
+ * Vale a caixa escolhida no cadastro do produto — é ela que a transportadora
+ * mede, não a peça: um vaso de 12 cm dentro de uma caixa de 20 cm viaja como
+ * 20 cm. Sem caixa, valem as medidas do próprio produto; sem nenhuma das duas,
+ * zero, e o pedido é cobrado pelo peso.
+ *
+ * Cada unidade conta uma caixa. Duas peças costumam viajar numa caixa só, mas
+ * juntar peças em caixas é problema de arrumação, não de conta: chutar que cabem
+ * juntas cobraria menos do que a transportadora vai cobrar da loja.
+ */
+function volumeDoPedido(itens, config) {
+  const c = mesclarConfig(config);
   return (itens || []).reduce((soma, i) => {
     const qtd = Math.max(1, Math.round(numero(i.quantity, 1)));
-    return soma + numero(i.volume_cm3, 0) * qtd;
+    const caixa = embalagemDoItem(i, c);
+    const volume = caixa
+      ? caixa.length_cm * caixa.width_cm * caixa.height_cm
+      : numero(i.volume_cm3, 0);
+    return soma + volume * qtd;
   }, 0);
 }
 
@@ -151,7 +225,7 @@ function pesoCubado(volumeCm3, config) {
 function pesoParaFrete(itens, config) {
   return Math.max(
     pesoDoPedido(itens, config),
-    pesoCubado(volumeDoPedido(itens), config)
+    pesoCubado(volumeDoPedido(itens, config), config)
   );
 }
 
@@ -259,6 +333,8 @@ module.exports = {
   regiaoDaUf,
   pesoDoPedido,
   volumeDoPedido,
+  normalizarEmbalagens,
+  embalagemDoItem,
   pesoCubado,
   pesoParaFrete,
   precoDaEntrega,
