@@ -15,15 +15,20 @@ import { mesclarTudo } from '@/lib/config-loja';
  * cabeçalho já fazia sozinho.
  */
 
-const ConfigContext = createContext({ config: mesclarTudo(null), admin: false, cliente: null, carregado: false });
+const VAZIO = {
+  config: mesclarTudo(null),
+  // Frete grátis e peça mais nova: a tarja do topo monta os avisos com isto.
+  entrega: { gratis_acima: 0 },
+  novidade: null,
+  admin: false,
+  cliente: null,
+  carregado: false,
+};
+
+const ConfigContext = createContext(VAZIO);
 
 export function ConfigLojaProvider({ children }) {
-  const [estado, setEstado] = useState({
-    config: mesclarTudo(null),
-    admin: false,
-    cliente: null,
-    carregado: false,
-  });
+  const [estado, setEstado] = useState(VAZIO);
 
   useEffect(() => {
     let vivo = true;
@@ -33,6 +38,8 @@ export function ConfigLojaProvider({ children }) {
         if (!vivo) return;
         setEstado({
           config: mesclarTudo(d.config),
+          entrega: d.entrega || VAZIO.entrega,
+          novidade: d.novidade || null,
           admin: Boolean(d.admin),
           cliente: d.cliente || null,
           carregado: true,

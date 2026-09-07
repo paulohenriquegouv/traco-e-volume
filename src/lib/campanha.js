@@ -24,9 +24,7 @@ const PADRAO = {
   fim: '',
   // Vazio limita a nada: a liquidação vale para o catálogo inteiro.
   categoria: '',
-  // Anúncio da liquidação em uma linha. Hoje nenhuma tela mostra este texto — a
-  // liquidação se anuncia no selo e no preço riscado de cada produto —, mas o
-  // campo continua aceito para quando voltar a existir um lugar para ele.
+  // O que a tarja do topo diz. Vazio monta um texto com nome e desconto.
   texto: '',
 };
 
@@ -117,7 +115,7 @@ function precoDoProduto(produto, campanha, hoje = hojeEmBelem()) {
   };
 }
 
-/** O anúncio da liquidação em uma linha, montado a partir do que foi configurado. */
+/** O que a tarja do topo anuncia enquanto a liquidação vale. */
 function textoDaFaixa(campanha) {
   const c = mesclarCampanha(campanha);
   if (c.texto) return c.texto;

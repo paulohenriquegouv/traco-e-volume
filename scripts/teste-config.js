@@ -10,6 +10,7 @@ const {
   mesclarCampanha, vigente, alcanca, precoDoProduto, textoDaFaixa,
 } = require('../src/lib/campanha');
 const { ehNovidade, seloDoProduto } = require('../src/lib/vitrine');
+const { avisosDaLoja, urgencia, indiceDoDia } = require('../src/lib/avisos');
 
 let passou = 0, falhou = 0;
 const casos = [];
@@ -187,6 +188,88 @@ teste('a faixa monta o texto sozinha, e o texto próprio manda', () => {
   igual(textoDaFaixa(LIQUIDA), 'Liquidação de Primavera: 20% de desconto');
   igual(textoDaFaixa({ ...LIQUIDA, categoria: 'vasos' }), 'Liquidação de Primavera: 20% de desconto em vasos');
   igual(textoDaFaixa({ ...LIQUIDA, texto: 'Tudo pela metade!' }), 'Tudo pela metade!');
+});
+
+
+// ---------- tarja de avisos ----------
+
+const LOJA = mesclarTudo({
+  campanha: { ativa: false },
+  prazos: { producao_dias: 3 },
+  pagamento: { max_parcelas: 10 },
+  vitrine: { dias_novidade: 30 },
+});
+const NOVA = { nome: 'Vaso Espiral', slug: 'vaso-espiral', created_at: '2026-09-10T10:00:00Z' };
+const ids = (...args) => avisosDaLoja(...args).map(a => a.id);
+
+teste('cada aviso nasce de um parâmetro; o que não está configurado não vira frase', () => {
+  igual(ids(LOJA, { hoje: '2026-09-15' }), ['producao', 'parcelamento']);
+  igual(ids(LOJA, { gratisAcima: 199.9, hoje: '2026-09-15' }),
+    ['frete', 'producao', 'parcelamento']);
+  igual(ids(mesclarTudo(null), { hoje: '2026-09-15' }), ['parcelamento'],
+    'a loja recém-instalada anuncia o parcelamento e mais nada');
+});
+
+teste('loja sem nada a dizer devolve lista vazia, e a tarja some', () => {
+  const muda = mesclarTudo({ pagamento: { cartao_ativo: false }, prazos: { producao_dias: 0 } });
+  igual(ids(muda, { hoje: '2026-09-15' }), []);
+});
+
+teste('a liquidação abre a tarja, e na última semana conta os dias', () => {
+  const com = mesclarTudo({ ...LOJA, campanha: LIQUIDA });
+  igual(ids(com, { hoje: '2026-09-15' })[0], 'liquidacao', 'vem antes de todo o resto');
+  igual(avisosDaLoja(com, { hoje: '2026-09-15' })[0].texto,
+    'Liquidação de Primavera: 20% de desconto', 'longe do fim, sem contagem');
+  igual(avisosDaLoja(com, { hoje: '2026-09-30' })[0].texto,
+    'Liquidação de Primavera: 20% de desconto — termina hoje');
+  igual(avisosDaLoja(com, { hoje: '2026-10-01' }).length, 2, 'no dia seguinte sai da tarja');
+});
+
+teste('a contagem só aparece na última semana — "faltam 25 dias" é o contrário de pressa', () => {
+  igual(urgencia('2026-09-30', '2026-09-30'), 'termina hoje');
+  igual(urgencia('2026-09-29', '2026-09-30'), 'termina amanhã');
+  igual(urgencia('2026-09-24', '2026-09-30'), 'faltam 6 dias');
+  igual(urgencia('2026-09-23', '2026-09-30'), '', '7 dias ainda não é urgência');
+  igual(urgencia('2026-09-15', ''), '', 'liquidação sem fim não conta nada');
+  igual(urgencia('2026-10-01', '2026-09-30'), '', 'data já passada não vira contagem');
+});
+
+teste('a novidade da tarja obedece a mesma janela do selo do card', () => {
+  igual(ids(LOJA, { novidade: NOVA, hoje: '2026-09-15' }),
+    ['novidade', 'producao', 'parcelamento']);
+  igual(ids(LOJA, { novidade: NOVA, hoje: '2026-11-15' }),
+    ['producao', 'parcelamento'], 'passados 30 dias deixa de ser novidade');
+  igual(ids(LOJA, { novidade: { nome: 'Sem slug' }, hoje: '2026-09-15' }),
+    ['producao', 'parcelamento'], 'produto sem link não vira aviso');
+});
+
+teste('o aviso da novidade leva para a própria peça', () => {
+  const a = avisosDaLoja(LOJA, { novidade: NOVA, hoje: '2026-09-15' })[0];
+  igual(a.texto, 'Novidade na loja: Vaso Espiral');
+  igual(a.href, '/produtos/vaso-espiral');
+});
+
+teste('frete grátis sai em reais, e zero não vira "acima de R$ 0"', () => {
+  igual(avisosDaLoja(LOJA, { gratisAcima: 199.9, hoje: '2026-09-15' })[0].texto,
+    'Frete grátis nas compras acima de R$ 199,90');
+  igual(ids(LOJA, { gratisAcima: 0, hoje: '2026-09-15' }), ['producao', 'parcelamento']);
+});
+
+teste('um dia útil não vira "até 1 dias úteis"', () => {
+  const um = mesclarTudo({ prazos: { producao_dias: 1 } });
+  igual(avisosDaLoja(um, { hoje: '2026-09-15' })[0].texto, 'Sua peça fica pronta em 1 dia útil');
+  igual(avisosDaLoja(LOJA, { hoje: '2026-09-15' })[0].texto,
+    'Sua peça fica pronta em até 3 dias úteis');
+});
+
+teste('sem giro, o aviso do dia muda de um dia para o outro e nunca sai da lista', () => {
+  igual(indiceDoDia('2026-09-15', 3), indiceDoDia('2026-09-18', 3), 'volta ao mesmo a cada 3 dias');
+  ok(indiceDoDia('2026-09-15', 3) !== indiceDoDia('2026-09-16', 3), 'dias seguidos, avisos diferentes');
+  for (const dia of ['2026-09-15', '2026-09-16', '2026-09-17', '1999-01-01']) {
+    const i = indiceDoDia(dia, 3);
+    ok(i >= 0 && i < 3, `índice fora da lista em ${dia}`);
+  }
+  igual(indiceDoDia('2026-09-15', 0), 0, 'lista vazia não estoura');
 });
 
 
