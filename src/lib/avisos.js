@@ -20,6 +20,15 @@
  *   3. Novidade — quem já conhece a loja quer ver o que entrou.
  *   4. Prazo de produção — responde "quando chega?" antes da pergunta.
  *   5. Parcelamento — o que torna a peça cara possível.
+ *   6. Formas de pagamento — sempre há uma ativa, então este aviso sempre existe.
+ *   7. O selo da vitrine — a frase que a loja já escolheu para se apresentar.
+ *
+ * Os dois últimos são o PISO da lista, e existem por um motivo prático: os cinco
+ * primeiros dependem de alguém ter preenchido frete grátis, prazo ou liquidação.
+ * Loja recém-instalada tinha só o parcelamento, e uma frase sozinha não gira —
+ * a tarja parecia quebrada quando estava apenas vazia de informação. Com o piso,
+ * qualquer loja tem pelo menos três frases desde o primeiro minuto, e cada campo
+ * preenchido acrescenta uma melhor na frente delas.
  *
  * Todo aviso leva para dentro da loja. Nenhum tira o visitante do site.
  *
@@ -28,6 +37,10 @@
 
 const { vigente, mesclarCampanha, textoDaFaixa, hojeEmBelem } = require('./campanha');
 const { ehNovidade } = require('./vitrine');
+const { metodosAtivos } = require('./config-loja');
+
+// Como cada meio de pagamento entra no meio da frase "Pague ...".
+const COMO_PAGAR = { pix: 'no Pix', card: 'no cartão', boleto: 'no boleto' };
 
 function inteiro(v) {
   const n = Number(v);
@@ -36,6 +49,12 @@ function inteiro(v) {
 
 function reais(v) {
   return `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
+}
+
+/** "no Pix", "no Pix ou no boleto", "no Pix, no cartão ou no boleto". */
+function lista(itens) {
+  if (itens.length <= 1) return itens[0] || '';
+  return `${itens.slice(0, -1).join(', ')} ou ${itens[itens.length - 1]}`;
 }
 
 /** Dias inteiros de `hoje` até `fim`. Null quando alguma das datas não presta. */
@@ -125,6 +144,16 @@ function avisosDaLoja(config, { gratisAcima = 0, novidade = null, hoje = hojeEmB
       texto: `Parcele em até ${parcelas}× no cartão`,
       href: '/produtos',
     });
+  }
+
+  const formas = metodosAtivos(pagamento).map(m => COMO_PAGAR[m.id]).filter(Boolean);
+  if (formas.length) {
+    avisos.push({ id: 'pagamento', texto: `Pague ${lista(formas)}`, href: '/produtos' });
+  }
+
+  const selo = String(vitrine.selo || '').trim();
+  if (selo) {
+    avisos.push({ id: 'selo', texto: selo, href: '/produtos' });
   }
 
   return avisos;

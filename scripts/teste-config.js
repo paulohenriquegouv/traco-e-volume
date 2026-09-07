@@ -233,16 +233,37 @@ const NOVA = { nome: 'Vaso Espiral', slug: 'vaso-espiral', created_at: '2026-09-
 const ids = (...args) => avisosDaLoja(...args).map(a => a.id);
 
 teste('cada aviso nasce de um parâmetro; o que não está configurado não vira frase', () => {
-  igual(ids(LOJA, { hoje: '2026-09-15' }), ['producao', 'parcelamento']);
+  igual(ids(LOJA, { hoje: '2026-09-15' }), ['producao', 'parcelamento', 'pagamento', 'selo']);
   igual(ids(LOJA, { gratisAcima: 199.9, hoje: '2026-09-15' }),
-    ['frete', 'producao', 'parcelamento']);
-  igual(ids(mesclarTudo(null), { hoje: '2026-09-15' }), ['parcelamento'],
-    'a loja recém-instalada anuncia o parcelamento e mais nada');
+    ['frete', 'producao', 'parcelamento', 'pagamento', 'selo']);
+  igual(ids(mesclarTudo({ prazos: { producao_dias: 0 } }), { hoje: '2026-09-15' }),
+    ['parcelamento', 'pagamento', 'selo'], 'sem prazo preenchido, o prazo não vira frase');
 });
 
-teste('loja sem nada a dizer devolve lista vazia, e a tarja some', () => {
-  const muda = mesclarTudo({ pagamento: { cartao_ativo: false }, prazos: { producao_dias: 0 } });
-  igual(ids(muda, { hoje: '2026-09-15' }), []);
+// Uma frase sozinha não gira, e tarja que não gira parece quebrada. Este é o
+// teste que impede a loja recém-instalada de voltar a esse estado.
+teste('toda loja tem pelo menos três frases para girar, sem configurar nada', () => {
+  const nova = avisosDaLoja(mesclarTudo(null), { hoje: '2026-09-15' });
+  ok(nova.length >= 3, `veio ${nova.length}`);
+  igual(nova.map(a => a.texto), [
+    'Parcele em até 12× no cartão',
+    'Pague no Pix, no cartão ou no boleto',
+    'Impressão 3D de Qualidade',
+  ]);
+});
+
+teste('as formas de pagamento acompanham o que está ligado', () => {
+  const so = c => avisosDaLoja(mesclarTudo({ pagamento: c }), { hoje: '2026-09-15' })
+    .find(a => a.id === 'pagamento').texto;
+  igual(so({ pix_ativo: true, cartao_ativo: false, boleto_ativo: false }), 'Pague no Pix');
+  igual(so({ pix_ativo: true, cartao_ativo: false, boleto_ativo: true }), 'Pague no Pix ou no boleto');
+  igual(so({ pix_ativo: false, cartao_ativo: false, boleto_ativo: false }), 'Pague no Pix',
+    'sem nenhum ligado, o padrão do checkout é o Pix — e a frase conta a verdade');
+});
+
+teste('selo em branco não vira frase vazia no topo', () => {
+  igual(ids(mesclarTudo({ vitrine: { selo: '   ' } }), { hoje: '2026-09-15' }),
+    ['parcelamento', 'pagamento', 'selo'], 'em branco cai no padrão, que existe');
 });
 
 teste('a liquidação abre a tarja, e na última semana conta os dias', () => {
@@ -252,7 +273,7 @@ teste('a liquidação abre a tarja, e na última semana conta os dias', () => {
     'Liquidação de Primavera: 20% de desconto', 'longe do fim, sem contagem');
   igual(avisosDaLoja(com, { hoje: '2026-09-30' })[0].texto,
     'Liquidação de Primavera: 20% de desconto — termina hoje');
-  igual(avisosDaLoja(com, { hoje: '2026-10-01' }).length, 2, 'no dia seguinte sai da tarja');
+  ok(!ids(com, { hoje: '2026-10-01' }).includes('liquidacao'), 'no dia seguinte sai da tarja');
 });
 
 teste('a contagem só aparece na última semana — "faltam 25 dias" é o contrário de pressa', () => {
@@ -266,11 +287,11 @@ teste('a contagem só aparece na última semana — "faltam 25 dias" é o contr�
 
 teste('a novidade da tarja obedece a mesma janela do selo do card', () => {
   igual(ids(LOJA, { novidade: NOVA, hoje: '2026-09-15' }),
-    ['novidade', 'producao', 'parcelamento']);
-  igual(ids(LOJA, { novidade: NOVA, hoje: '2026-11-15' }),
-    ['producao', 'parcelamento'], 'passados 30 dias deixa de ser novidade');
-  igual(ids(LOJA, { novidade: { nome: 'Sem slug' }, hoje: '2026-09-15' }),
-    ['producao', 'parcelamento'], 'produto sem link não vira aviso');
+    ['novidade', 'producao', 'parcelamento', 'pagamento', 'selo']);
+  ok(!ids(LOJA, { novidade: NOVA, hoje: '2026-11-15' }).includes('novidade'),
+    'passados 30 dias deixa de ser novidade');
+  ok(!ids(LOJA, { novidade: { nome: 'Sem slug' }, hoje: '2026-09-15' }).includes('novidade'),
+    'produto sem link não vira aviso');
 });
 
 teste('o aviso da novidade leva para a própria peça', () => {
@@ -282,7 +303,8 @@ teste('o aviso da novidade leva para a própria peça', () => {
 teste('frete grátis sai em reais, e zero não vira "acima de R$ 0"', () => {
   igual(avisosDaLoja(LOJA, { gratisAcima: 199.9, hoje: '2026-09-15' })[0].texto,
     'Frete grátis nas compras acima de R$ 199,90');
-  igual(ids(LOJA, { gratisAcima: 0, hoje: '2026-09-15' }), ['producao', 'parcelamento']);
+  ok(!ids(LOJA, { gratisAcima: 0, hoje: '2026-09-15' }).includes('frete'),
+    'zero não vira "acima de R$ 0"');
 });
 
 teste('um dia útil não vira "até 1 dias úteis"', () => {
