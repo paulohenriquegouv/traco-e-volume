@@ -130,18 +130,4 @@ function avisosDaLoja(config, { gratisAcima = 0, novidade = null, hoje = hojeEmB
   return avisos;
 }
 
-/**
- * Qual aviso mostrar quando não se pode girar.
- *
- * Para quem pediu menos animação no sistema, a tarja não fica trocando de frase
- * sozinha — mostra uma só. Escolher pela data faz a tarja mudar de um dia para o
- * outro em vez de congelar na mesma mensagem para sempre.
- */
-function indiceDoDia(hoje, total) {
-  if (!(total > 0)) return 0;
-  const dia = Math.floor(new Date(`${hoje}T00:00:00Z`).getTime() / 86400000);
-  if (!Number.isFinite(dia)) return 0;
-  return ((dia % total) + total) % total;
-}
-
-module.exports = { avisosDaLoja, urgencia, indiceDoDia };
+module.exports = { avisosDaLoja, urgencia };
