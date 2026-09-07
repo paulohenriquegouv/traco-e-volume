@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useConfigLoja } from './ConfigLoja';
-import { avisosDaLoja, indiceDoDia } from '@/lib/avisos';
-import { hojeEmBelem } from '@/lib/campanha';
+import { avisosDaLoja } from '@/lib/avisos';
 
 /**
  * A tarja de avisos, no topo de todas as páginas.
@@ -13,22 +12,30 @@ import { hojeEmBelem } from '@/lib/campanha';
  * liquidação —, todas montadas a partir do que a loja já tem configurado. Aqui
  * mora só a vez de cada uma.
  *
- * Três decisões que valem explicação:
+ * O giro não guarda "está pausado?" em nenhum estado, e isso é de propósito. Duas
+ * versões anteriores morriam justamente por isso: um `pausado` que ligava no
+ * hover ou no foco e nunca mais desligava — o cursor descansando na primeira
+ * linha da tela, ou o foco que fica no link depois de clicar nele e navegar —
+ * deixava a tarja congelada para sempre, e só no desktop, porque em tela de toque
+ * não existe cursor parado.
  *
- * - A troca para quando o ponteiro está SOBRE A FRASE, não em qualquer lugar da
- *   tarja. A tarja atravessa a tela inteira e fica na primeira linha da página,
- *   logo abaixo das abas do navegador: no desktop o cursor descansa ali sem
- *   ninguém querer nada, e pausar pela faixa inteira travava o giro na segunda
- *   mensagem — parecia quebrado, e no celular (que não tem cursor) não
- *   acontecia. Sobre o texto centralizado o ponteiro só chega de propósito, que
- *   é quando pausar ajuda: quem está lendo não pode ver a frase escapar no meio.
- *   O clique continua valendo na faixa toda, que é o alvo bom no celular.
- * - Quem pediu menos animação no sistema não vê nada girar: recebe um aviso só,
- *   escolhido pela data, que muda de um dia para o outro.
+ * Agora cada batida do relógio olha o DOM e decide na hora: se o ponteiro está
+ * sobre a frase, ou se o teclado está dentro da tarja, ela espera a próxima
+ * batida. Nada para de vez — no pior caso o giro perde seis segundos e volta
+ * sozinho. Pausar continua servindo a quem está lendo (ou mirando o link), sem
+ * poder travar o resto.
+ *
+ * Duas decisões que sobraram das versões anteriores e continuam valendo:
+ *
+ * - Quem pediu menos animação no sistema continua vendo as frases trocarem; o
+ *   que sai é o movimento da troca (o `faixa-entra` do globals.css). Trocar um
+ *   texto de lugar nenhum não desencadeia enjoo em ninguém, e congelar a tarja
+ *   nessa preferência escondia informação de quem só pediu menos animação.
  * - Nada de `aria-live`: um leitor de tela não deve ser interrompido a cada seis
  *   segundos por uma mensagem que não é resposta a nada que a pessoa fez.
  *
- * Sem aviso nenhum configurado a tarja não ocupa um pixel.
+ * Sem aviso nenhum configurado a tarja não ocupa um pixel. Com um só, ela mostra
+ * esse um e não gira — não há para onde girar.
  */
 
 const SEGUNDOS = 6;
@@ -41,24 +48,25 @@ export default function FaixaAvisos() {
   );
 
   const [vez, setVez] = useState(0);
-  const [parado, setParado] = useState(false);
+  const tarja = useRef(null);
   const total = avisos.length;
 
   useEffect(() => {
     if (total < 2) return;
 
-    const menos = typeof window !== 'undefined' && window.matchMedia
-      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      : false;
-    if (menos) {
-      setVez(indiceDoDia(hojeEmBelem(), total));
-      return;
-    }
+    const relogio = setInterval(() => {
+      const caixa = tarja.current;
+      // Quem está lendo a frase (ponteiro em cima) ou navegando pelo teclado
+      // (foco dentro da tarja) ganha mais seis segundos — e só isso.
+      const lendo = caixa
+        && (caixa.querySelector('.faixa-frase')?.matches(':hover')
+          || caixa.matches(':focus-within'));
+      if (lendo) return;
+      setVez(v => (v + 1) % total);
+    }, SEGUNDOS * 1000);
 
-    if (parado) return;
-    const relogio = setInterval(() => setVez(v => (v + 1) % total), SEGUNDOS * 1000);
     return () => clearInterval(relogio);
-  }, [total, parado]);
+  }, [total]);
 
   if (total === 0) return null;
 
@@ -67,19 +75,15 @@ export default function FaixaAvisos() {
   const aviso = avisos[vez % total];
 
   return (
-    <div className="bg-accent-500 text-white text-center text-sm font-medium px-4">
-      <Link
-        key={aviso.id}
-        href={aviso.href}
-        className="faixa-aviso block py-2.5"
-        onFocus={() => setParado(true)}
-        onBlur={() => setParado(false)}
-      >
-        {/* o span existe para o hover ter o tamanho da frase, e não da tela */}
+    <div ref={tarja} className="bg-accent-500 text-white text-center text-sm font-medium px-4">
+      <Link href={aviso.href} className="block py-2.5">
+        {/* A `key` na frase, e não no link: é ela que troca, e é nela que a
+            animação de entrada precisa recomeçar. O `inline-block` deixa o
+            hover com o tamanho do texto em vez do da tela — o clique continua
+            valendo na faixa toda, que é o alvo bom no celular. */}
         <span
-          className="hover:underline underline-offset-2"
-          onMouseEnter={() => setParado(true)}
-          onMouseLeave={() => setParado(false)}
+          key={aviso.id}
+          className="faixa-frase faixa-aviso inline-block hover:underline underline-offset-2"
         >
           {aviso.texto}
         </span>

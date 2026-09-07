@@ -10,7 +10,7 @@ const {
   mesclarCampanha, vigente, alcanca, precoDoProduto, textoDaFaixa,
 } = require('../src/lib/campanha');
 const { ehNovidade, seloDoProduto } = require('../src/lib/vitrine');
-const { avisosDaLoja, urgencia, indiceDoDia } = require('../src/lib/avisos');
+const { avisosDaLoja, urgencia } = require('../src/lib/avisos');
 
 let passou = 0, falhou = 0;
 const casos = [];
@@ -290,16 +290,6 @@ teste('um dia útil não vira "até 1 dias úteis"', () => {
   igual(avisosDaLoja(um, { hoje: '2026-09-15' })[0].texto, 'Sua peça fica pronta em 1 dia útil');
   igual(avisosDaLoja(LOJA, { hoje: '2026-09-15' })[0].texto,
     'Sua peça fica pronta em até 3 dias úteis');
-});
-
-teste('sem giro, o aviso do dia muda de um dia para o outro e nunca sai da lista', () => {
-  igual(indiceDoDia('2026-09-15', 3), indiceDoDia('2026-09-18', 3), 'volta ao mesmo a cada 3 dias');
-  ok(indiceDoDia('2026-09-15', 3) !== indiceDoDia('2026-09-16', 3), 'dias seguidos, avisos diferentes');
-  for (const dia of ['2026-09-15', '2026-09-16', '2026-09-17', '1999-01-01']) {
-    const i = indiceDoDia(dia, 3);
-    ok(i >= 0 && i < 3, `índice fora da lista em ${dia}`);
-  }
-  igual(indiceDoDia('2026-09-15', 0), 0, 'lista vazia não estoura');
 });
 
 
