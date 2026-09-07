@@ -60,6 +60,18 @@ const BLOCOS = {
         ajuda: 'Produto cadastrado há menos dias que isso leva o selo "Novidade". 0 desliga.' },
     ],
   },
+  links: {
+    aba: 'Página de links',
+    descricao: 'A página /links da loja — feita para ser o link da bio do Instagram. '
+      + 'Os botões aparecem na ordem desta lista. Endereço pode ser um caminho da própria '
+      + 'loja (/produtos) ou um link completo (https://...).',
+    campos: [
+      { campo: 'titulo', rotulo: 'Título da página', largura: 'metade', ajuda: 'Em branco usa o nome da loja.' },
+      { campo: 'subtitulo', rotulo: 'Frase abaixo do título', largura: 'metade' },
+      { campo: 'itens', rotulo: 'Botões', tipo: 'lista-links',
+        ajuda: 'Botão sem rótulo ou sem endereço é descartado ao salvar. Apagar todos traz o conjunto padrão de volta.' },
+    ],
+  },
   pagamento: {
     aba: 'Pagamento',
     descricao: 'O que o cliente pode escolher na hora de pagar.',
@@ -90,11 +102,64 @@ const BLOCOS = {
 };
 
 // A entrega entra no meio: é o parâmetro que mais muda depois que a loja abre.
-const ABAS = ['loja', 'vitrine', 'entrega', 'pagamento', 'campanha', 'prazos'];
+const ABAS = ['loja', 'vitrine', 'links', 'entrega', 'pagamento', 'campanha', 'prazos'];
 const NOME_DA_ABA = { ...Object.fromEntries(Object.entries(BLOCOS).map(([k, b]) => [k, b.aba])), entrega: 'Entrega' };
+
+/**
+ * Editor da lista de botões da página de links.
+ *
+ * A ordem das linhas é a ordem na página, por isso as setas; o servidor descarta
+ * linha incompleta ao salvar, então aqui não precisa validar nada.
+ */
+function ListaLinks({ itens, aoMudar }) {
+  const lista = Array.isArray(itens) ? itens : [];
+  const trocar = (i, campo, v) =>
+    aoMudar(lista.map((item, j) => (j === i ? { ...item, [campo]: v } : item)));
+  const remover = (i) => aoMudar(lista.filter((_, j) => j !== i));
+  const mover = (i, delta) => {
+    const j = i + delta;
+    if (j < 0 || j >= lista.length) return;
+    const nova = [...lista];
+    [nova[i], nova[j]] = [nova[j], nova[i]];
+    aoMudar(nova);
+  };
+
+  return (
+    <div className="space-y-2">
+      {lista.map((item, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input className={ic} placeholder="Rótulo do botão" value={item.rotulo ?? ''}
+            onChange={e => trocar(i, 'rotulo', e.target.value)} />
+          <input className={ic} placeholder="/produtos ou https://..." value={item.url ?? ''}
+            onChange={e => trocar(i, 'url', e.target.value)} />
+          <button type="button" onClick={() => mover(i, -1)} disabled={i === 0}
+            className="p-2 text-gray-400 hover:text-gray-700 disabled:opacity-30" title="Subir">↑</button>
+          <button type="button" onClick={() => mover(i, 1)} disabled={i === lista.length - 1}
+            className="p-2 text-gray-400 hover:text-gray-700 disabled:opacity-30" title="Descer">↓</button>
+          <button type="button" onClick={() => remover(i)}
+            className="p-2 text-gray-400 hover:text-red-600" title="Remover">✕</button>
+        </div>
+      ))}
+      <button type="button" onClick={() => aoMudar([...lista, { rotulo: '', url: '' }])}
+        className="text-sm font-medium text-primary-600 hover:text-primary-700">
+        + Adicionar botão
+      </button>
+    </div>
+  );
+}
 
 function Campo({ def, valor, aoMudar }) {
   const comum = { className: ic, value: valor ?? '', onChange: e => aoMudar(e.target.value) };
+
+  if (def.tipo === 'lista-links') {
+    return (
+      <div className="sm:col-span-2">
+        <label className="block text-sm font-medium text-gray-700 mb-1">{def.rotulo}</label>
+        <ListaLinks itens={valor} aoMudar={aoMudar} />
+        {def.ajuda && <p className="text-xs text-gray-400 mt-1">{def.ajuda}</p>}
+      </div>
+    );
+  }
 
   if (def.tipo === 'booleano') {
     return (

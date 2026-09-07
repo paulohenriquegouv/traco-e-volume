@@ -40,6 +40,24 @@ const PADRAO = {
     // 0 desliga o selo.
     dias_novidade: 30,
   },
+  links: {
+    // Em branco, o título da página usa o nome da loja.
+    titulo: '',
+    subtitulo: 'Peças exclusivas em impressão 3D',
+    // A página do link da bio nunca abre vazia: sem nada salvo, estes botões
+    // aparecem. WhatsApp e Instagram entram pelos mesmos endereços que o site
+    // inteiro já usa.
+    itens: [
+      { rotulo: 'Ver produtos', url: '/produtos' },
+      ...(process.env.NEXT_PUBLIC_WHATSAPP_LINK
+        ? [{ rotulo: 'Falar no WhatsApp', url: process.env.NEXT_PUBLIC_WHATSAPP_LINK }]
+        : []),
+      { rotulo: 'Acompanhar meu pedido', url: '/pedido' },
+      ...(process.env.NEXT_PUBLIC_INSTAGRAM
+        ? [{ rotulo: 'Instagram', url: process.env.NEXT_PUBLIC_INSTAGRAM }]
+        : []),
+    ],
+  },
   pagamento: {
     pix_ativo: true,
     cartao_ativo: true,
@@ -78,6 +96,18 @@ function dinheiro(v, padrao = 0) {
   return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : padrao;
 }
 
+/**
+ * Endereço de um botão da página de links: caminho do próprio site (/produtos)
+ * ou endereço completo. Quem digita "wa.me/55..." sem protocolo ganha o https
+ * na frente, em vez de um link quebrado na bio.
+ */
+function urlDeLink(v) {
+  const s = texto(v);
+  if (!s) return '';
+  if (s.startsWith('/') || /^https?:\/\//i.test(s)) return s;
+  return `https://${s}`;
+}
+
 /** Booleano que respeita `false` explícito, mas trata ausência como o padrão. */
 function ligado(v, padrao) {
   if (v === true || v === false) return v;
@@ -98,6 +128,21 @@ function mesclarBloco(chave, bruto) {
   const c = bruto && typeof bruto === 'object' ? bruto : {};
 
   if (chave === 'campanha') return mesclarCampanha(bruto);
+
+  if (chave === 'links') {
+    const brutos = Array.isArray(c.itens) ? c.itens : p.itens;
+    const itens = brutos
+      .map(i => ({ rotulo: texto(i?.rotulo), url: urlDeLink(i?.url) }))
+      .filter(i => i.rotulo && i.url)
+      .slice(0, 12);
+    return {
+      titulo: texto(c.titulo, p.titulo),
+      subtitulo: texto(c.subtitulo, p.subtitulo),
+      // Apagar todos os botões não deixa a bio apontando para uma página vazia:
+      // o conjunto padrão volta, como todo campo em branco desta tela.
+      itens: itens.length ? itens : p.itens,
+    };
+  }
 
   if (chave === 'pagamento') {
     return {
