@@ -2,7 +2,6 @@ import './globals.css';
 import { CartProvider } from '@/components/CartContext';
 import { ConfigLojaProvider } from '@/components/ConfigLoja';
 import Header from '@/components/Header';
-import FaixaCampanha from '@/components/FaixaCampanha';
 import Footer from '@/components/Footer';
 import NavegacaoRapida from '@/components/NavegacaoRapida';
 
@@ -56,7 +55,6 @@ export default function RootLayout({ children }) {
         />
         <ConfigLojaProvider>
           <CartProvider>
-            <FaixaCampanha />
             <Header />
             <NavegacaoRapida />
             <main className="flex-1">{children}</main>

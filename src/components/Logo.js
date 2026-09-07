@@ -37,7 +37,7 @@ export function LogoMarca({ className = '', animado = true, titulo = 'Traço & V
           d="M 4,21 A 28,14.5 0 0 1 60,21"
           fill="none"
           stroke={LARANJA}
-          strokeWidth="5"
+          strokeWidth="7"
           strokeLinecap="round"
           transform="rotate(-17 32 21)"
         />
@@ -63,7 +63,7 @@ export function LogoMarca({ className = '', animado = true, titulo = 'Traço & V
           d="M 60,21 A 28,14.5 0 0 1 4,21"
           fill="none"
           stroke={LARANJA}
-          strokeWidth="5"
+          strokeWidth="7"
           strokeLinecap="round"
           transform="rotate(-17 32 21)"
         />
@@ -92,7 +92,7 @@ export function LogoCompleta({ className = '', animado = true, titulo = 'Traço 
           d="M 14,48 A 156,34 0 0 1 326,48"
           fill="none"
           stroke={LARANJA}
-          strokeWidth="8"
+          strokeWidth="11"
           strokeLinecap="round"
           transform="rotate(-7 170 48)"
         />
@@ -117,7 +117,7 @@ export function LogoCompleta({ className = '', animado = true, titulo = 'Traço 
           d="M 326,48 A 156,34 0 0 1 14,48"
           fill="none"
           stroke={LARANJA}
-          strokeWidth="8"
+          strokeWidth="11"
           strokeLinecap="round"
           transform="rotate(-7 170 48)"
         />
