@@ -369,8 +369,10 @@ antes de anunciar o recurso.
 do que já está configurado (07/09/2026): liquidação — com contagem regressiva só na última
 semana —, frete grátis acima de X (`gratis_acima` da tabela de frete), a peça mais recente
 do catálogo, prazo de produção e parcelamento. O que não está configurado não vira frase, e
-loja sem aviso nenhum não mostra tarja. O giro para no hover/foco e não acontece para quem
-pediu menos animação no sistema (aí sai um aviso só, escolhido pela data). Os dados que não
+loja sem aviso nenhum não mostra tarja. O giro para com o ponteiro **sobre a frase** (não em
+qualquer ponto da faixa — no desktop o cursor descansa na primeira linha da tela sem querer
+nada, e pausar pela faixa inteira travava o giro) ou com o foco do teclado no link, e não
+acontece para quem pediu menos animação no sistema (aí sai um aviso só, escolhido pela data). Os dados que não
 estavam no config — `entrega.gratis_acima` e `novidade` — vêm na resposta de `/api/loja`,
 na consulta que já existia. Aviso novo se acrescenta em `avisosDaLoja`, não no componente.
 
