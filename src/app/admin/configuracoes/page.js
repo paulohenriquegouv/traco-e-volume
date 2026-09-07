@@ -21,15 +21,16 @@ const BLOCOS = {
     aba: 'Liquidação',
     descricao: 'Um desconto para a loja toda, com data para começar e para acabar. '
       + 'Nada é gravado no cadastro dos produtos: quando a data de fim passa, os preços voltam '
-      + 'ao normal sozinhos, sem você desfazer nada produto por produto.',
+      + 'ao normal sozinhos, sem você desfazer nada produto por produto. Enquanto vale, a '
+      + 'liquidação abre a tarja do topo e cada produto mostra o selo e o preço riscado.',
     campos: [
       { campo: 'ativa', rotulo: 'Liquidação ligada', tipo: 'booleano' },
-      { campo: 'nome', rotulo: 'Nome da liquidação', largura: 'metade', ajuda: 'Aparece na faixa do topo do site.' },
+      { campo: 'nome', rotulo: 'Nome da liquidação', largura: 'metade', ajuda: 'Aparece na tarja do topo do site.' },
       { campo: 'percentual', rotulo: 'Desconto (%)', tipo: 'numero', largura: 'metade', ajuda: 'De 0 a 90. Aplicado sobre o preço de venda de cada produto.' },
       { campo: 'inicio', rotulo: 'Começa em', tipo: 'data', largura: 'metade', ajuda: 'Em branco começa assim que você ligar.' },
       { campo: 'fim', rotulo: 'Termina em', tipo: 'data', largura: 'metade', ajuda: 'Em branco não termina — e liquidação sem fim vira preço normal.' },
       { campo: 'categoria', rotulo: 'Só nesta categoria', largura: 'metade', ajuda: 'Em branco vale para o catálogo inteiro.' },
-      { campo: 'texto', rotulo: 'Texto da faixa', ajuda: 'Em branco, monta um texto com o nome e o desconto.' },
+      { campo: 'texto', rotulo: 'Texto da tarja', ajuda: 'O que a tarja do topo anuncia. Em branco, monta um texto com o nome e o desconto — e na última semana ela mesma acrescenta quantos dias faltam.' },
     ],
   },
   loja: {

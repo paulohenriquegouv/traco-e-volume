@@ -363,6 +363,25 @@ antes de anunciar o recurso.
 - **Container:** max-width 1280px
 - **Animações:** fadeIn, slideIn, pulse-dot
 
+### Tarja de avisos (topo de todas as páginas)
+
+`FaixaAvisos` gira, de 6 em 6 segundos, entre frases que `src/lib/avisos.js` monta a partir
+do que já está configurado (07/09/2026): liquidação — com contagem regressiva só na última
+semana —, frete grátis acima de X (`gratis_acima` da tabela de frete), a peça mais recente
+do catálogo, prazo de produção e parcelamento. O que não está configurado não vira frase, e
+loja sem aviso nenhum não mostra tarja. O giro para no hover/foco e não acontece para quem
+pediu menos animação no sistema (aí sai um aviso só, escolhido pela data). Os dados que não
+estavam no config — `entrega.gratis_acima` e `novidade` — vêm na resposta de `/api/loja`,
+na consulta que já existia. Aviso novo se acrescenta em `avisosDaLoja`, não no componente.
+
+### Marca (`Logo.js`, `public/logo.svg`, `public/logo-completo.svg`)
+
+O anel laranja tem volume por três pistas somadas: a metade da frente é mais grossa que a de
+trás, cada metade tem degradê com a luz vindo de cima, e um reflexo fino corre pela borda
+superior da frente. A espessura é a única que sobrevive a 24 px (favicon) — mexer nela com
+cuidado. Os dois SVGs de `public/` são cópias estáticas do mesmo desenho: mudou um, mudar os
+três.
+
 ---
 
 ## 13. 🌍 Variáveis de Ambiente
