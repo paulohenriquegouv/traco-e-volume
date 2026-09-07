@@ -320,6 +320,7 @@ antes de anunciar o recurso.
 | `/checkout` | Client | Formulário + pagamento |
 | `/checkout-sucesso` | Client | QR Code Pix / boleto |
 | `/pedido` | Client | Buscar por e-mail ou ID |
+| `/links` | Server | Página do link da bio do Instagram — título, frase e botões editáveis em Configurações → "Página de links" (bloco `links` do config-loja) |
 
 ---
 
@@ -403,6 +404,15 @@ npm run teste-webhook  # Testes do webhook do Mercado Pago (sem banco)
 
 **Plataforma:** Vercel (auto-deploy via GitHub, branch `main`)
 **URL:** https://traco-e-volume.vercel.app
+
+### Cache da vitrine (ISR + revalidação no salvar)
+
+A home tem `revalidate = 60` e o ISR serve a página **velha** enquanto regenera em segundo
+plano — o primeiro acesso após uma mudança ainda vê o conteúdo antigo. Por isso as rotas de
+escrita chamam `revalidatePath()` no ato (06/09/2026): criar/editar/excluir produto revalida
+`/`, `/produtos`, `/produtos/[slug]` (o slug antigo também, em renomeação) e `/sitemap.xml`;
+salvar bloco em `/api/admin/configuracoes` revalida `/` e `/produtos`. O admin vê a mudança
+na loja imediatamente. Se criar rota nova que altere o que a loja mostra, repetir o padrão.
 
 ---
 
