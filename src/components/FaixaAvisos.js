@@ -15,8 +15,14 @@ import { hojeEmBelem } from '@/lib/campanha';
  *
  * Três decisões que valem explicação:
  *
- * - A troca para quando o ponteiro entra na tarja ou o teclado chega nela. Quem
- *   está lendo (ou mirando o link) não pode ver a frase escapar no meio.
+ * - A troca para quando o ponteiro está SOBRE A FRASE, não em qualquer lugar da
+ *   tarja. A tarja atravessa a tela inteira e fica na primeira linha da página,
+ *   logo abaixo das abas do navegador: no desktop o cursor descansa ali sem
+ *   ninguém querer nada, e pausar pela faixa inteira travava o giro na segunda
+ *   mensagem — parecia quebrado, e no celular (que não tem cursor) não
+ *   acontecia. Sobre o texto centralizado o ponteiro só chega de propósito, que
+ *   é quando pausar ajuda: quem está lendo não pode ver a frase escapar no meio.
+ *   O clique continua valendo na faixa toda, que é o alvo bom no celular.
  * - Quem pediu menos animação no sistema não vê nada girar: recebe um aviso só,
  *   escolhido pela data, que muda de um dia para o outro.
  * - Nada de `aria-live`: um leitor de tela não deve ser interrompido a cada seis
@@ -61,19 +67,22 @@ export default function FaixaAvisos() {
   const aviso = avisos[vez % total];
 
   return (
-    <div
-      className="bg-accent-500 text-white text-center text-sm font-medium px-4"
-      onMouseEnter={() => setParado(true)}
-      onMouseLeave={() => setParado(false)}
-      onFocus={() => setParado(true)}
-      onBlur={() => setParado(false)}
-    >
+    <div className="bg-accent-500 text-white text-center text-sm font-medium px-4">
       <Link
         key={aviso.id}
         href={aviso.href}
-        className="faixa-aviso block py-2.5 hover:underline underline-offset-2"
+        className="faixa-aviso block py-2.5"
+        onFocus={() => setParado(true)}
+        onBlur={() => setParado(false)}
       >
-        {aviso.texto}
+        {/* o span existe para o hover ter o tamanho da frase, e não da tela */}
+        <span
+          className="hover:underline underline-offset-2"
+          onMouseEnter={() => setParado(true)}
+          onMouseLeave={() => setParado(false)}
+        >
+          {aviso.texto}
+        </span>
       </Link>
     </div>
   );
