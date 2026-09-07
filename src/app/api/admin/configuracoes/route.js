@@ -36,6 +36,7 @@ export async function PUT(request) {
     // cai junto com o salvar, para o admin conferir a mudança no ato.
     revalidatePath('/');
     revalidatePath('/produtos');
+    revalidatePath('/links');
 
     return NextResponse.json({ ok: true, bloco, valor });
   } catch (e) {

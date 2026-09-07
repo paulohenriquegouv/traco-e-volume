@@ -57,6 +57,36 @@ teste('JSON corrompido em um bloco não derruba os outros', () => {
   igual(c.vitrine.titulo, 'Vale');
 });
 
+// ---------- página de links ----------
+
+teste('botão sem rótulo ou sem endereço é descartado ao salvar', () => {
+  const c = mesclarBloco('links', { itens: [
+    { rotulo: 'Produtos', url: '/produtos' },
+    { rotulo: '', url: '/pedido' },
+    { rotulo: 'Sem endereço', url: '  ' },
+  ] });
+  igual(c.itens, [{ rotulo: 'Produtos', url: '/produtos' }]);
+});
+
+teste('endereço sem protocolo ganha https, caminho do site fica como está', () => {
+  const c = mesclarBloco('links', { itens: [
+    { rotulo: 'Zap', url: 'wa.me/5591981158315' },
+    { rotulo: 'Catálogo', url: '/produtos' },
+  ] });
+  igual(c.itens[0].url, 'https://wa.me/5591981158315');
+  igual(c.itens[1].url, '/produtos');
+});
+
+teste('apagar todos os botões traz o conjunto padrão de volta', () => {
+  const c = mesclarBloco('links', { itens: [{ rotulo: '', url: '' }] });
+  igual(c.itens, PADRAO.links.itens);
+});
+
+teste('título em branco fica em branco — a página usa o nome da loja', () => {
+  const c = mesclarBloco('links', { titulo: '   ' });
+  igual(c.titulo, '');
+});
+
 // ---------- pagamento ----------
 
 teste('desligar uma forma de pagamento tira ela do checkout', () => {
