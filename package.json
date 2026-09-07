@@ -26,6 +26,7 @@
     "reenviar-verificacao": "node scripts/reenviar-verificacao.js"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.0",
     "@vercel/functions": "^3.9.5",
     "bcryptjs": "^2.4.3",
     "jose": "^5.6.0",

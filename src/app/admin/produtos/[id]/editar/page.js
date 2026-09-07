@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import ImagensProduto from '@/components/ImagensProduto';
 
 export default function EditarProdutoPage() {
   const router = useRouter();
@@ -87,16 +88,6 @@ export default function EditarProdutoPage() {
     }
   };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch('/api/upload', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.success) setImages([...images, data.url]);
-  };
-
   if (loadingData) {
     return <div className="text-center py-12 text-gray-500">Carregando produto...</div>;
   }
@@ -151,23 +142,7 @@ export default function EditarProdutoPage() {
           </div>
         </div>
 
-        {/* Imagens */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
-          <h3 className="font-bold text-gray-900">Imagens</h3>
-          <div className="flex flex-wrap gap-3">
-            {images.map((url, i) => (
-              <div key={i} className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden border">
-                <img src={url} alt="" className="w-full h-full object-cover" />
-              </div>
-            ))}
-            <label className="w-20 h-20 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-300">
-              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-              </svg>
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-            </label>
-          </div>
-        </div>
+        <ImagensProduto images={images} onChange={setImages} />
 
         {/* Características */}
         <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">

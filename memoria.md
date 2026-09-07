@@ -19,7 +19,7 @@ traco-e-volume/
 ├── data/
 │   └── loja.json              # Backup/dados iniciais em JSON
 ├── public/
-│   └── uploads/                # Imagens enviadas via admin
+│   └── uploads/                # Só no dev: em produção a imagem vai para o Vercel Blob
 ├── scripts/
 │   ├── init-db.js             # Inicializador do banco
 │   ├── seed.js                # Popula banco com produtos
@@ -75,15 +75,17 @@ traco-e-volume/
 │   │       │   └── [id]/
 │   │       │       └── route.js # GET, PATCH, DELETE
 │   │       └── upload/
-│   │           └── route.js    # POST: upload de imagem (admin)
+│   │           └── route.js    # POST: upload de imagem para o Vercel Blob (admin)
 │   ├── components/
 │   │   ├── CartContext.js      # Context do carrinho + localStorage
 │   │   ├── Header.js           # Navbar com logo, links e ícone do carrinho
 │   │   ├── Footer.js           # Rodapé com links e contato
-│   │   └── ProductCard.js      # Card de produto (imagem, nome, preço, add)
+│   │   ├── ProductCard.js      # Card de produto (imagem, nome, preço, add)
+│   │   └── ImagensProduto.js   # Bloco de imagens do admin: upload, colar URL, remover
 │   └── lib/
 │       ├── auth.js             # JWT, bcrypt, login, cookies
-│       └── db.js               # Conexão MySQL, criação de tabelas
+│       ├── db.js               # Conexão MySQL, criação de tabelas
+│       └── redimensionar-imagem.js # Reduz a foto no navegador antes do upload
 ---
 
 ## 3. ⚙️ Stack Técnica
@@ -349,7 +351,7 @@ antes de anunciar o recurso.
 | `/api/produtos/[id]` | GET, PATCH, DELETE | PATCH/DEL: admin | CRUD |
 | `/api/pedidos` | GET, POST | GET: admin | Listar/buscar |
 | `/api/pedidos/[id]` | GET, PATCH | admin | Detalhe/status |
-| `/api/upload` | POST | admin | Upload imagem |
+| `/api/upload` | POST | admin | Upload imagem → Vercel Blob |
 | `/api/webhooks/mercadopago` | POST, GET | HMAC | Confirmação automática de pagamento |
 | `/api/frete` | POST | — | Opções de entrega para um carrinho + UF |
 | `/api/admin/frete` | GET, PUT | admin | Ler/salvar a tabela de frete |
@@ -435,6 +437,37 @@ npm run teste-webhook  # Testes do webhook do Mercado Pago (sem banco)
 
 **Plataforma:** Vercel (auto-deploy via GitHub, branch `main`)
 **URL:** https://traco-e-volume.vercel.app
+
+### Imagens dos produtos (Vercel Blob)
+
+A imagem do produto vive no **Vercel Blob**, não no repositório e não no disco da função.
+
+O motivo: na Vercel o filesystem da serverless function é **somente leitura** — só `/tmp`
+aceita escrita, e `/tmp` morre com a invocação. A versão original de `/api/upload` gravava em
+`public/uploads` com `fs.writeFile`: funcionava no `npm run dev` e falhava calada em produção.
+E como `public/uploads/*` está no `.gitignore`, imagem enviada localmente também nunca chegava
+ao deploy — os dois caminhos estavam quebrados ao mesmo tempo (07/09/2026).
+
+Como funciona hoje:
+
+- O navegador **reduz a foto antes de subir** (`src/lib/redimensionar-imagem.js`): lado maior
+  de 1600 px, WebP com qualidade 0,85. Resolve dois problemas de uma vez — o corpo da requisição
+  nunca chega perto do limite de ~4,5 MB da função, e o cliente não baixa foto de 12 MP para ver
+  um card de 300 px. SVG e GIF passam direto (canvas destrói vetor e animação).
+- `/api/upload` valida tipo e tamanho e chama `put()` do `@vercel/blob`, prefixo `produtos/`.
+  Devolve URL pública, permanente, servida por CDN. O banco guarda só a URL.
+- **Sem `BLOB_READ_WRITE_TOKEN` a rota cai no disco local**, para o `npm run dev` continuar
+  funcionando sem token. Em produção o token sempre existe.
+- O admin também aceita **colar a URL** de uma imagem já hospedada. É o plano B quando o upload
+  falha e o caminho para arquivo grande demais.
+
+**Link de OneDrive, SharePoint, Google Drive e Dropbox não serve como `<img src>`**: o link abre
+um visualizador HTML em vez do arquivo, exige sessão, sofre throttling e quebra se o arquivo for
+movido. O campo de URL recusa esses domínios com aviso explícito. Esses serviços servem como
+acervo das fotos originais em alta — não como origem da vitrine.
+
+**Configuração na Vercel:** Storage → Create Database → Blob, conectado ao projeto. Isso injeta
+`BLOB_READ_WRITE_TOKEN` sozinho nos três ambientes. Sem essa etapa o upload em produção falha.
 
 ### Cache da vitrine (ISR + revalidação no salvar)
 

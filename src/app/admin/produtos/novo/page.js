@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ImagensProduto from '@/components/ImagensProduto';
 
 export default function NovoProdutoPage() {
   const router = useRouter();
@@ -30,16 +31,6 @@ export default function NovoProdutoPage() {
       if (!res.ok) throw new Error(data.error || 'Erro ao criar');
       router.push('/admin/produtos');
     } catch (err) { setError(err.message); } finally { setLoading(false); }
-  };
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch('/api/upload', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.success) setImages([...images, data.url]);
   };
 
   const ic = "w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent";
@@ -90,22 +81,7 @@ export default function NovoProdutoPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
-          <h3 className="font-bold text-gray-900">Imagens</h3>
-          <div className="flex flex-wrap gap-3">
-            {images.map((url, i) => (
-              <div key={i} className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden border">
-                <img src={url} alt="" className="w-full h-full object-cover" />
-              </div>
-            ))}
-            <label className="w-20 h-20 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-300">
-              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-              </svg>
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-            </label>
-          </div>
-        </div>
+        <ImagensProduto images={images} onChange={setImages} />
 
         <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
           <h3 className="font-bold text-gray-900">Características</h3>
