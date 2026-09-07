@@ -368,8 +368,12 @@ antes de anunciar o recurso.
 `FaixaAvisos` gira, de 6 em 6 segundos, entre frases que `src/lib/avisos.js` monta a partir
 do que já está configurado (07/09/2026): liquidação — com contagem regressiva só na última
 semana —, frete grátis acima de X (`gratis_acima` da tabela de frete), a peça mais recente
-do catálogo, prazo de produção e parcelamento. O que não está configurado não vira frase, e
-loja sem aviso nenhum não mostra tarja; com um só, ela mostra esse um e não gira.
+do catálogo, prazo de produção e parcelamento. O que não está configurado não vira frase.
+
+**Piso da lista:** as formas de pagamento ativas e o selo da vitrine entram sempre, e é isso
+que garante três frases à loja recém-instalada. Sem esse piso, quem não preencheu frete
+grátis nem prazo ficava com **uma** frase — e uma frase não gira, o que faz a tarja parecer
+quebrada quando ela está apenas vazia de informação. Há teste guardando esse mínimo.
 
 O giro **não guarda estado de pausa** — cada batida do relógio olha o DOM e decide na hora se
 o ponteiro está sobre a frase (`.faixa-frase:hover`) ou o teclado está dentro da tarja
