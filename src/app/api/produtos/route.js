@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db';
 import { numeroCm, textoParaGravar } from '@/lib/dimensoes';
 import { checkAuth } from '@/lib/auth';
@@ -117,6 +118,12 @@ export async function POST(request) {
     );
 
     const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid);
+
+    // A home fica 60s em cache; quem cadastra quer ver o produto no ar ao salvar.
+    revalidatePath('/');
+    revalidatePath('/produtos');
+    revalidatePath(`/produtos/${slug}`);
+    revalidatePath('/sitemap.xml');
 
     return NextResponse.json({
       ...product,

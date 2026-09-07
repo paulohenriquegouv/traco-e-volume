@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db';
 import { numeroCm, textoParaGravar } from '@/lib/dimensoes';
 import { checkAuth } from '@/lib/auth';
@@ -97,6 +98,18 @@ export async function PUT(request, { params }) {
     );
 
     const updated = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+
+    // Destaque, preço ou estoque mudou: derruba o cache da vitrine na hora,
+    // em vez de esperar a janela de 60s da home. O slug antigo também cai,
+    // porque a página dele pode ter ficado para trás numa renomeação.
+    revalidatePath('/');
+    revalidatePath('/produtos');
+    revalidatePath(`/produtos/${existing.slug}`);
+    if (slug !== existing.slug) {
+      revalidatePath(`/produtos/${slug}`);
+      revalidatePath('/sitemap.xml');
+    }
+
     return NextResponse.json({
       ...updated,
       images: JSON.parse(updated.images || '[]'),
@@ -126,6 +139,11 @@ export async function DELETE(request, { params }) {
     }
 
     await db.prepare('DELETE FROM products WHERE id = ?').run(id);
+
+    revalidatePath('/');
+    revalidatePath('/produtos');
+    revalidatePath(`/produtos/${existing.slug}`);
+    revalidatePath('/sitemap.xml');
 
     return NextResponse.json({ message: 'Produto excluído com sucesso' });
   } catch (error) {

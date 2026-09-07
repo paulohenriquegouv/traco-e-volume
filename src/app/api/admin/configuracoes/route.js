@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db';
 import { checkAuth } from '@/lib/auth';
 import { lerConfigLoja, salvarBloco, CHAVES } from '@/lib/config-loja';
@@ -30,6 +31,12 @@ export async function PUT(request) {
     // salvarBloco passa tudo pela mescla: campo em branco vira o padrão e número
     // inválido não vira NaN gravado no banco.
     const valor = await salvarBloco(db, bloco, body.valores ?? {});
+
+    // Vitrine, liquidação e prazos aparecem na home e nos cards: o cache de 60s
+    // cai junto com o salvar, para o admin conferir a mudança no ato.
+    revalidatePath('/');
+    revalidatePath('/produtos');
+
     return NextResponse.json({ ok: true, bloco, valor });
   } catch (e) {
     console.error('Erro ao salvar configuração:', e?.message);
