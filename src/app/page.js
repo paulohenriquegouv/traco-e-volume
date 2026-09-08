@@ -164,10 +164,15 @@ export default async function HomePage() {
                   elementos do fundo transformaria um flagrante de trabalho num
                   arranjo de objetos soltos no ar. */}
               <div className="order-2 md:order-1">
+                {/* A borda esfumada esta assada no arquivo (WebP com alpha): a
+                    imagem perde foco e opacidade nos ultimos ~35 px e dissolve no
+                    painel. Por isso NAO leva rounded/shadow/ring -- moldura em
+                    imagem esfumada desenha de volta o retangulo que o esfumado
+                    veio tirar. Depende do painel ser claro. */}
                 <img
                   src="/personalizados.webp"
                   alt="Peça sobre a bandeja giratória sendo digitalizada pelo scanner 3D"
-                  className="w-full max-w-sm mx-auto rounded-xl shadow-lg ring-1 ring-black/5"
+                  className="w-full max-w-sm mx-auto"
                 />
               </div>
               <div className="order-1 md:order-2">
