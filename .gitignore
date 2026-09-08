@@ -28,6 +28,12 @@ data/
 public/uploads/*
 !public/uploads/.gitkeep
 
+# Fotos originais dos equipamentos (marca/fotos/): ficam no disco, sincronizadas
+# pelo Dropbox, para permitir um recorte diferente depois. Fora do git porque
+# sao 5 MB de JPEG de celular e o que o site serve e a versao otimizada em
+# public/ -- 24 KB do scanner e 42 KB da bandeja.
+marca/fotos/
+
 # Debug
 npm-debug.log*
 yarn-debug.log*

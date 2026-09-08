@@ -70,10 +70,14 @@ export default async function HomePage() {
             colisão, não como composição. */}
         <div aria-hidden className="pointer-events-none hidden lg:block absolute right-0 top-0 h-full w-1/2 select-none">
           <div className="absolute right-16 top-1/2 -translate-y-1/2 h-[130%] w-[130%] rounded-full bg-primary-500/25 blur-3xl" />
+          {/* Brilho proprio: o scanner e preto fosco e, sem ele, some no roxo --
+              o paquimetro se safa porque tem a escala clara. Inclinacao de so
+              5 graus porque tripe tombado parece tripe caindo. */}
+          <div className="absolute right-[24%] top-[62%] -translate-y-1/2 h-[75%] w-[38%] rounded-full bg-primary-400/25 blur-2xl" />
           <img
-            src="/scanner-hero.png"
+            src="/scanner-hero.webp"
             alt=""
-            className="absolute right-[30%] xl:right-[34%] top-[64%] -translate-y-1/2 h-[62%] max-w-none -rotate-[12deg] drop-shadow-2xl"
+            className="absolute right-[26%] xl:right-[30%] top-[62%] -translate-y-1/2 h-[78%] max-w-none -rotate-[5deg] drop-shadow-2xl"
           />
           <img
             src="/paquimetro-hero.png"
@@ -154,12 +158,16 @@ export default async function HomePage() {
         <div className="container-custom">
           <div className="rounded-2xl border border-primary-100 bg-gradient-to-br from-primary-50 to-white overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-8 p-8 md:p-12">
-              <div className="relative order-2 md:order-1">
-                <div aria-hidden className="absolute inset-0 rounded-full bg-primary-200/40 blur-3xl" />
+              {/* Fotografia emoldurada, e nao recorte flutuando como no hero.
+                  O que vende aqui e a cena inteira: a peca do cliente sobre a
+                  bandeja e o scanner apontado para ela. Recortar os tres
+                  elementos do fundo transformaria um flagrante de trabalho num
+                  arranjo de objetos soltos no ar. */}
+              <div className="order-2 md:order-1">
                 <img
-                  src="/scanner.png"
-                  alt="Scanner 3D Creality Otter usado para digitalizar a peça do cliente"
-                  className="relative mx-auto max-h-72 md:max-h-96 w-auto drop-shadow-xl"
+                  src="/personalizados.webp"
+                  alt="Peça sobre a bandeja giratória sendo digitalizada pelo scanner 3D"
+                  className="w-full max-w-sm mx-auto rounded-xl shadow-lg ring-1 ring-black/5"
                 />
               </div>
               <div className="order-1 md:order-2">
