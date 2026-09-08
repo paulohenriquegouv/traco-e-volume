@@ -466,8 +466,21 @@ um visualizador HTML em vez do arquivo, exige sessão, sofre throttling e quebra
 movido. O campo de URL recusa esses domínios com aviso explícito. Esses serviços servem como
 acervo das fotos originais em alta — não como origem da vitrine.
 
-**Configuração na Vercel:** Storage → Create Database → Blob, conectado ao projeto. Isso injeta
-`BLOB_READ_WRITE_TOKEN` sozinho nos três ambientes. Sem essa etapa o upload em produção falha.
+**Configuração na Vercel** (feita em 07/09/2026): Storage → Create Database → **Blob**. Store
+`traco-e-volume-imagens`, região **gru1 (São Paulo)**, acesso **Public**.
+
+Dois detalhes que não são o padrão da tela e quebram tudo se passarem batido:
+
+- **Access tem que ser `Public`.** O padrão marcado é `Private` (rotulado "Recommended"), que
+  exige token a cada leitura — a vitrine não abriria. O `put()` do código passa
+  `access: 'public'`, que só é válido em store pública.
+- **Marcar "Add a read-write token env var to this connection"** ao conectar o projeto. Sem essa
+  caixa a Vercel cria apenas `BLOB_STORE_ID` e `BLOB_WEBHOOK_PUBLIC_KEY` — **não** cria a
+  `BLOB_READ_WRITE_TOKEN`, que é a única que a rota de upload usa.
+
+Conectado a **All Environments**. Variável de ambiente nova não vale para deploy que já existe:
+depois de conectar o store é preciso um deploy novo (push no `main` ou Redeploy na aba
+Deployments), senão o upload continua falhando.
 
 ### Cache da vitrine (ISR + revalidação no salvar)
 
