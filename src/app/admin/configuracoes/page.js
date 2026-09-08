@@ -59,6 +59,11 @@ const BLOCOS = {
         ajuda: 'A seção na página inicial com os produtos marcados como Destaque.' },
       { campo: 'dias_novidade', rotulo: 'Novidade dura (dias)', tipo: 'numero', largura: 'metade',
         ajuda: 'Produto cadastrado há menos dias que isso leva o selo "Novidade". 0 desliga.' },
+      { campo: 'personalizados_titulo', rotulo: 'Título da seção de personalizados',
+        ajuda: 'A seção da página inicial sobre escanear e reproduzir a peça do cliente.' },
+      { campo: 'personalizados_texto', rotulo: 'Texto dos personalizados', tipo: 'textarea' },
+      { campo: 'personalizados_botao', rotulo: 'Botão dos personalizados', largura: 'metade',
+        ajuda: 'Abre a conversa no WhatsApp.' },
     ],
   },
   links: {

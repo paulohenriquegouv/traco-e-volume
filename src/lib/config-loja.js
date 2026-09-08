@@ -39,6 +39,15 @@ const PADRAO = {
     // Por quantos dias um produto recem-cadastrado leva o selo de novidade.
     // 0 desliga o selo.
     dias_novidade: 30,
+    // A secao de projetos personalizados da home. O catalogo vende o que ja
+    // existe; e aqui que a loja pede o trabalho sob medida, que e o de melhor
+    // margem. Texto editavel porque a oferta muda mais rapido que o codigo.
+    personalizados_titulo: 'Seu objeto, digitalizado e impresso',
+    personalizados_texto:
+      'Uma peça que quebrou e não se fabrica mais, um molde, um brinquedo antigo. '
+      + 'Escaneio o original em 3D e imprimo a réplica com as medidas do seu, '
+      + 'quantas vezes você precisar.',
+    personalizados_botao: 'Falar sobre meu projeto',
   },
   links: {
     // Em branco, o título da página usa o nome da loja.
